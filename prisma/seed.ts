@@ -8,7 +8,7 @@
  *
  * Run via `npm run db:seed` (configured in package.json `prisma.seed`).
  */
-import { PrismaClient, ChannelRole, PresenceStatus } from "@prisma/client";
+import { PrismaClient, ChannelMemberRole, UserStatus } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -25,21 +25,21 @@ async function main() {
     email: string;
     name: string;
     image: string;
-    presence: PresenceStatus;
+    status: UserStatus;
   }) =>
     prisma.user.upsert({
       where: { email: u.email },
       update: {
         name: u.name,
         image: u.image,
-        presence: u.presence,
+        status: u.status,
         lastSeen: new Date(),
       },
       create: {
         email: u.email,
         name: u.name,
         image: u.image,
-        presence: u.presence,
+        status: u.status,
         emailVerified: new Date(),
       },
     });
@@ -48,25 +48,25 @@ async function main() {
     email: "ada@chatpulse.dev",
     name: "Ada Lovelace",
     image: "https://i.pravatar.cc/150?u=ada",
-    presence: PresenceStatus.ONLINE,
+    status: UserStatus.ONLINE,
   });
   const grace = await upsertUser({
     email: "grace@chatpulse.dev",
     name: "Grace Hopper",
     image: "https://i.pravatar.cc/150?u=grace",
-    presence: PresenceStatus.AWAY,
+    status: UserStatus.AWAY,
   });
   const linus = await upsertUser({
     email: "linus@chatpulse.dev",
     name: "Linus Torvalds",
     image: "https://i.pravatar.cc/150?u=linus",
-    presence: PresenceStatus.OFFLINE,
+    status: UserStatus.OFFLINE,
   });
   const margaret = await upsertUser({
     email: "margaret@chatpulse.dev",
     name: "Margaret Hamilton",
     image: "https://i.pravatar.cc/150?u=margaret",
-    presence: PresenceStatus.ONLINE,
+    status: UserStatus.ONLINE,
   });
   console.log("  4 users");
 
@@ -118,17 +118,17 @@ async function main() {
   const memberships: Array<{
     channelId: string;
     userId: string;
-    role: ChannelRole;
+    role: ChannelMemberRole;
   }> = [
-    { channelId: general.id, userId: ada.id, role: ChannelRole.OWNER },
-    { channelId: general.id, userId: grace.id, role: ChannelRole.MEMBER },
-    { channelId: general.id, userId: linus.id, role: ChannelRole.MEMBER },
-    { channelId: general.id, userId: margaret.id, role: ChannelRole.MEMBER },
-    { channelId: engineering.id, userId: grace.id, role: ChannelRole.OWNER },
-    { channelId: engineering.id, userId: ada.id, role: ChannelRole.ADMIN },
-    { channelId: engineering.id, userId: linus.id, role: ChannelRole.MEMBER },
-    { channelId: random.id, userId: linus.id, role: ChannelRole.OWNER },
-    { channelId: random.id, userId: margaret.id, role: ChannelRole.MEMBER },
+    { channelId: general.id, userId: ada.id, role: ChannelMemberRole.OWNER },
+    { channelId: general.id, userId: grace.id, role: ChannelMemberRole.MEMBER },
+    { channelId: general.id, userId: linus.id, role: ChannelMemberRole.MEMBER },
+    { channelId: general.id, userId: margaret.id, role: ChannelMemberRole.MEMBER },
+    { channelId: engineering.id, userId: grace.id, role: ChannelMemberRole.OWNER },
+    { channelId: engineering.id, userId: ada.id, role: ChannelMemberRole.ADMIN },
+    { channelId: engineering.id, userId: linus.id, role: ChannelMemberRole.MEMBER },
+    { channelId: random.id, userId: linus.id, role: ChannelMemberRole.OWNER },
+    { channelId: random.id, userId: margaret.id, role: ChannelMemberRole.MEMBER },
   ];
 
   await Promise.all(
@@ -186,7 +186,7 @@ async function main() {
       authorId: linus.id,
       body: "This message was removed.",
       createdAt: minutesAgo(45),
-      isDeleted: true,
+      deletedAt: minutesAgo(44),
     },
     {
       channelId: random.id,
@@ -206,22 +206,22 @@ async function main() {
   console.log(`  ${channelMessages.length} channel messages`);
 
   // --- Direct message conversation --------------------------------------
-  const dmId = "seed-dm-ada-grace";
-  await prisma.directMessage.upsert({
-    where: { id: dmId },
+  const conversationId = "seed-dm-ada-grace";
+  await prisma.directConversation.upsert({
+    where: { id: conversationId },
     update: {},
-    create: { id: dmId },
+    create: { id: conversationId },
   });
 
   await Promise.all(
     [ada, grace].map((u) =>
-      prisma.directMessageParticipant.upsert({
+      prisma.directConversationParticipant.upsert({
         where: {
-          directMessageId_userId: { directMessageId: dmId, userId: u.id },
+          conversationId_userId: { conversationId, userId: u.id },
         },
         update: {},
         create: {
-          directMessageId: dmId,
+          conversationId,
           userId: u.id,
           // Grace hasn't caught up — leaves an unread for the demo.
           lastReadAt: u.id === ada.id ? new Date() : minutesAgo(20),
@@ -230,28 +230,31 @@ async function main() {
     )
   );
 
+  // Reset DM history so re-runs produce a clean, ordered conversation.
+  await prisma.directMessage.deleteMany({ where: { conversationId } });
+
   const dmMessages = [
     {
-      directMessageId: dmId,
+      conversationId,
       authorId: grace.id,
       body: "Hey Ada — can you review the migration PR?",
       createdAt: minutesAgo(18),
     },
     {
-      directMessageId: dmId,
+      conversationId,
       authorId: ada.id,
       body: "On it. Looks solid so far. 👍",
       createdAt: minutesAgo(15),
     },
     {
-      directMessageId: dmId,
+      conversationId,
       authorId: grace.id,
       body: "Thanks! Ping me if anything's off.",
       createdAt: minutesAgo(12),
     },
   ];
 
-  await prisma.message.createMany({ data: dmMessages });
+  await prisma.directMessage.createMany({ data: dmMessages });
   console.log(`  1 DM conversation with ${dmMessages.length} messages`);
 
   console.log("Seed complete ✅");

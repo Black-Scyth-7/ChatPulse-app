@@ -1,5 +1,5 @@
 // ChatPulse Prisma schema — the single source of truth for the data model.
-// Owned by DatabaseEng (CHAA-4). App code accesses data only via the generated
+// Owned by DatabaseEng (CHAA-5). App code accesses data only via the generated
 // Prisma client; no raw SQL in application code.
 // Auth models follow the Auth.js (NextAuth) Prisma adapter conventions.
 
@@ -17,14 +17,14 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 /// Realtime presence, driven by the Socket.io presence_update event.
-enum PresenceStatus {
+enum UserStatus {
   ONLINE
   OFFLINE
   AWAY
 }
 
 /// A member's role within a channel.
-enum ChannelRole {
+enum ChannelMemberRole {
   OWNER
   ADMIN
   MEMBER
@@ -35,25 +35,26 @@ enum ChannelRole {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String         @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String?        @unique
+  email         String?    @unique
   emailVerified DateTime?
   image         String?
   // Presence tracking for the online/away/offline indicator.
-  presence      PresenceStatus @default(OFFLINE)
-  lastSeen      DateTime       @default(now())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  status        UserStatus @default(OFFLINE)
+  lastSeen      DateTime   @default(now())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   accounts           Account[]
   sessions           Session[]
   channelMemberships ChannelMember[]
-  createdChannels    Channel[]                  @relation("ChannelCreatedBy")
+  createdChannels    Channel[]                       @relation("ChannelCreatedBy")
   messages           Message[]
-  dmParticipations   DirectMessageParticipant[]
+  dmParticipations   DirectConversationParticipant[]
+  directMessages     DirectMessage[]
 
-  @@index([presence])
+  @@index([status])
 }
 
 /// OAuth account link (Google / GitHub). Matches the NextAuth Prisma adapter.
@@ -111,7 +112,9 @@ model Channel {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  createdBy User            @relation("ChannelCreatedBy", fields: [createdById], references: [id])
+  // Restrict: a channel outlives its creator's account deletion rather than
+  // silently taking the whole channel (and its messages) down.
+  createdBy User            @relation("ChannelCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   members   ChannelMember[]
   messages  Message[]
 
@@ -119,13 +122,13 @@ model Channel {
 }
 
 model ChannelMember {
-  id         String      @id @default(cuid())
+  id         String            @id @default(cuid())
   channelId  String
   userId     String
-  role       ChannelRole @default(MEMBER)
+  role       ChannelMemberRole @default(MEMBER)
   // Backs unread-count computation: messages after lastReadAt are unread.
-  lastReadAt DateTime    @default(now())
-  joinedAt   DateTime    @default(now())
+  lastReadAt DateTime          @default(now())
+  joinedAt   DateTime          @default(now())
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -136,32 +139,28 @@ model ChannelMember {
 }
 
 // ---------------------------------------------------------------------------
-// Messages (channel + direct message)
+// Channel messages
 // ---------------------------------------------------------------------------
 
-/// A single message. Belongs to exactly one of a Channel or a DirectMessage
-/// conversation. Soft-delete/edit flags back the message_deleted /
-/// message_edited realtime events.
+/// A single channel message. Soft-delete (deletedAt) / edit (editedAt) back the
+/// message_deleted / message_edited realtime events.
 model Message {
-  id              String    @id @default(cuid())
+  id        String    @id @default(cuid())
   // Markdown body (rendered client-side with react-markdown + remark-gfm).
-  body            String    @db.Text
-  authorId        String
-  channelId       String?
-  directMessageId String?
-  isDeleted       Boolean   @default(false)
-  editedAt        DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  body      String    @db.Text
+  authorId  String
+  channelId String
+  editedAt  DateTime?
+  // Soft delete: non-null once the message is deleted; rows are never hard-deleted.
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  channel       Channel?       @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  directMessage DirectMessage? @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   // Hot path: paginating a channel's history newest-first.
   @@index([channelId, createdAt])
-  // Hot path: paginating a DM conversation's history.
-  @@index([directMessageId, createdAt])
   @@index([authorId])
 }
 
@@ -169,29 +168,49 @@ model Message {
 // Direct messages
 // ---------------------------------------------------------------------------
 
-/// A direct-message conversation between two (or more) participants. Messages
-/// within the conversation are stored in Message via directMessageId.
-model DirectMessage {
+/// A direct-message conversation between two (or more) participants.
+model DirectConversation {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  participants DirectMessageParticipant[]
-  messages     Message[]
+  participants DirectConversationParticipant[]
+  messages     DirectMessage[]
 }
 
-model DirectMessageParticipant {
-  id              String   @id @default(cuid())
-  directMessageId String
-  userId          String
+model DirectConversationParticipant {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
   // Backs DM unread counts.
-  lastReadAt      DateTime @default(now())
-  joinedAt        DateTime @default(now())
+  lastReadAt     DateTime @default(now())
+  joinedAt       DateTime @default(now())
 
-  directMessage DirectMessage @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([directMessageId, userId])
+  @@unique([conversationId, userId])
   @@index([userId])
-  @@index([directMessageId])
+  @@index([conversationId])
+}
+
+/// A single direct message within a DirectConversation. Soft-delete (deletedAt)
+/// / edit (editedAt) mirror the channel Message behavior.
+model DirectMessage {
+  id             String    @id @default(cuid())
+  body           String    @db.Text
+  authorId       String
+  conversationId String
+  editedAt       DateTime?
+  // Soft delete: non-null once the message is deleted; rows are never hard-deleted.
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Hot path: paginating a DM conversation's history.
+  @@index([conversationId, createdAt])
+  @@index([authorId])
 }
