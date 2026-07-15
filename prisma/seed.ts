@@ -1,12 +1,17 @@
 /**
  * ChatPulse dev seed.
  *
- * Produces a small but realistic dataset: a handful of users, a few channels
- * with memberships, some channel messages, and a DM conversation with history.
- * Idempotent — safe to re-run; it upserts users/channels by natural keys and
- * resets message/DM data each run.
+ * Produces a small but realistic dataset per CHAA-6:
+ *   - 5 users (realistic names + emails)
+ *   - 3 channels: #general, #random, #engineering
+ *   - all 5 users are members of #general
+ *   - 20 messages in #general spread across the users
+ *   - 1 DM conversation between user 1 and user 2 with 5 messages
  *
- * Run via `npm run db:seed` (configured in package.json `prisma.seed`).
+ * Idempotent — safe to re-run: users/channels are upserted by natural keys and
+ * message/DM data is reset each run so history stays clean and ordered.
+ *
+ * Run via `pnpm prisma db seed` (configured in package.json `prisma.seed`).
  */
 import { PrismaClient, ChannelMemberRole, UserStatus } from "@prisma/client";
 
@@ -68,7 +73,13 @@ async function main() {
     image: "https://i.pravatar.cc/150?u=margaret",
     status: UserStatus.ONLINE,
   });
-  console.log("  4 users");
+  const alan = await upsertUser({
+    email: "alan@chatpulse.dev",
+    name: "Alan Turing",
+    image: "https://i.pravatar.cc/150?u=alan",
+    status: UserStatus.ONLINE,
+  });
+  console.log("  5 users");
 
   // --- Channels ----------------------------------------------------------
   // Deterministic ids so re-runs update rather than duplicate.
@@ -115,6 +126,7 @@ async function main() {
   console.log("  3 channels");
 
   // --- Memberships -------------------------------------------------------
+  // All 5 users belong to #general; the other channels get a subset.
   const memberships: Array<{
     channelId: string;
     userId: string;
@@ -124,11 +136,14 @@ async function main() {
     { channelId: general.id, userId: grace.id, role: ChannelMemberRole.MEMBER },
     { channelId: general.id, userId: linus.id, role: ChannelMemberRole.MEMBER },
     { channelId: general.id, userId: margaret.id, role: ChannelMemberRole.MEMBER },
+    { channelId: general.id, userId: alan.id, role: ChannelMemberRole.MEMBER },
     { channelId: engineering.id, userId: grace.id, role: ChannelMemberRole.OWNER },
     { channelId: engineering.id, userId: ada.id, role: ChannelMemberRole.ADMIN },
     { channelId: engineering.id, userId: linus.id, role: ChannelMemberRole.MEMBER },
+    { channelId: engineering.id, userId: alan.id, role: ChannelMemberRole.MEMBER },
     { channelId: random.id, userId: linus.id, role: ChannelMemberRole.OWNER },
     { channelId: random.id, userId: margaret.id, role: ChannelMemberRole.MEMBER },
+    { channelId: random.id, userId: ada.id, role: ChannelMemberRole.MEMBER },
   ];
 
   await Promise.all(
@@ -149,25 +164,41 @@ async function main() {
   // Reset message data so re-runs produce a clean, ordered history.
   await prisma.message.deleteMany({});
 
-  const channelMessages = [
-    {
-      channelId: general.id,
-      authorId: ada.id,
-      body: "👋 Welcome to **ChatPulse**! This is the `#general` channel.",
-      createdAt: minutesAgo(120),
-    },
-    {
-      channelId: general.id,
-      authorId: margaret.id,
-      body: "Excited to be here! The dark theme looks great.",
-      createdAt: minutesAgo(115),
-    },
-    {
-      channelId: general.id,
-      authorId: grace.id,
-      body: "Reminder: standup at 10am. Bring your _blockers_.",
-      createdAt: minutesAgo(90),
-    },
+  // 20 messages in #general, spread across all 5 users and ordered by time.
+  const generalAuthors = [ada, margaret, grace, linus, alan];
+  const generalBodies = [
+    "👋 Welcome to **ChatPulse**! This is the `#general` channel.",
+    "Excited to be here! The dark theme looks great.",
+    "Reminder: standup at 10am. Bring your _blockers_.",
+    "Morning all ☀️ — coffee machine on floor 3 is fixed.",
+    "Who's presenting at the demo this Friday?",
+    "I can take the demo. Working on the realtime presence widget.",
+    "Nice — the online/away/offline dots look slick.",
+    "Docs update: the API reference now covers the `messages` endpoints.",
+    "Heads up: deploy window is 2–3pm today.",
+    "Lunch plans? Thinking tacos 🌮",
+    "Tacos +1.",
+    "Can someone review PR #42? Small change to the seed script.",
+    "On it 👀",
+    "Merged. Thanks for the quick turnaround!",
+    "Reminder to fill out the Q3 survey by EOD.",
+    "Done ✅",
+    "The new `#engineering` channel is live for deep-dives.",
+    "Great, moving the infra thread over there.",
+    "Happy Friday, everyone! 🎉",
+    "Have a great weekend all — see you Monday.",
+  ];
+
+  const generalMessages = generalBodies.map((body, i) => ({
+    channelId: general.id,
+    authorId: generalAuthors[i % generalAuthors.length].id,
+    body,
+    // Oldest first: message 0 is ~200 min ago, most recent ~10 min ago.
+    createdAt: minutesAgo(200 - i * 10),
+  }));
+
+  // A few extra messages in the other channels for a realistic sidebar.
+  const otherMessages = [
     {
       channelId: engineering.id,
       authorId: grace.id,
@@ -202,10 +233,13 @@ async function main() {
     },
   ];
 
-  await prisma.message.createMany({ data: channelMessages });
-  console.log(`  ${channelMessages.length} channel messages`);
+  await prisma.message.createMany({ data: [...generalMessages, ...otherMessages] });
+  console.log(
+    `  ${generalMessages.length} messages in #general (+${otherMessages.length} in other channels)`
+  );
 
   // --- Direct message conversation --------------------------------------
+  // 1 DM between user 1 (Ada) and user 2 (Grace) with 5 messages.
   const conversationId = "seed-dm-ada-grace";
   await prisma.directConversation.upsert({
     where: { id: conversationId },
@@ -251,6 +285,18 @@ async function main() {
       authorId: grace.id,
       body: "Thanks! Ping me if anything's off.",
       createdAt: minutesAgo(12),
+    },
+    {
+      conversationId,
+      authorId: ada.id,
+      body: "One nit on the index naming, left a comment.",
+      createdAt: minutesAgo(9),
+    },
+    {
+      conversationId,
+      authorId: grace.id,
+      body: "Good catch — fixed and re-pushed. 🙌",
+      createdAt: minutesAgo(6),
     },
   ];
 
