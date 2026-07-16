@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import type { PresenceStatus } from "@/lib/socket-events";
+import { useSocket } from "@/lib/useSocket";
+import { PRESENCE_DOT, PRESENCE_LABEL } from "@/lib/usePresence";
 import { ChannelList } from "./ChannelList";
 import { DMList } from "./DMList";
 import { CreateChannelModal } from "./CreateChannelModal";
@@ -22,22 +25,9 @@ export interface SidebarUser {
   image: string | null;
 }
 
-type Presence = "online" | "away" | "dnd" | "offline";
-
-type StatusOption = { key: Presence; label: string; dot: string };
-
-const STATUSES: StatusOption[] = [
-  { key: "online", label: "Online", dot: "bg-success" },
-  { key: "away", label: "Away", dot: "bg-warning" },
-  { key: "dnd", label: "Do not disturb", dot: "bg-danger" },
-  { key: "offline", label: "Offline", dot: "bg-offline" },
-];
-
-const DEFAULT_STATUS: StatusOption = {
-  key: "online",
-  label: "Online",
-  dot: "bg-success",
-};
+// The self-status selector offers exactly the states the presence system
+// supports (online/away/offline); "offline" is an explicit "appear offline".
+const STATUS_ORDER: PresenceStatus[] = ["online", "away", "offline"];
 
 function initials(user: SidebarUser): string {
   const source = user.name ?? user.email ?? "?";
@@ -50,12 +40,19 @@ function initials(user: SidebarUser): string {
 }
 
 function UserSection({ user }: { user: SidebarUser }) {
-  const [status, setStatus] = useState<Presence>("online");
+  const { emit } = useSocket();
+  const [status, setStatus] = useState<PresenceStatus>("online");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const current =
-    STATUSES.find((s) => s.key === status) ?? DEFAULT_STATUS;
+  // Optimistically reflect the pick locally and broadcast it so everyone else's
+  // presence dot for us updates (the server persists it and re-emits
+  // presence:changed to all clients).
+  const selectStatus = (next: PresenceStatus) => {
+    setStatus(next);
+    setOpen(false);
+    emit("presence:update", { status: next });
+  };
 
   // Close the dropdown on outside click.
   useEffect(() => {
@@ -91,7 +88,7 @@ function UserSection({ user }: { user: SidebarUser }) {
           aria-hidden="true"
           className={cn(
             "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-surface",
-            current.dot,
+            PRESENCE_DOT[status],
           )}
         />
       </span>
@@ -107,8 +104,8 @@ function UserSection({ user }: { user: SidebarUser }) {
           aria-expanded={open}
           className="flex items-center gap-1 text-xs text-text-secondary transition-colors duration-fast hover:text-text focus:outline-none focus-visible:shadow-focus"
         >
-          <span className={cn("h-2 w-2 rounded-full", current.dot)} />
-          <span className="truncate">{current.label}</span>
+          <span className={cn("h-2 w-2 rounded-full", PRESENCE_DOT[status])} />
+          <span className="truncate">{PRESENCE_LABEL[status]}</span>
           <span aria-hidden="true">▾</span>
         </button>
       </div>
@@ -118,21 +115,18 @@ function UserSection({ user }: { user: SidebarUser }) {
           role="menu"
           className="absolute left-3 top-full z-dropdown mt-1 min-w-44 rounded-md border border-border bg-surface-overlay py-1 shadow-md"
         >
-          {STATUSES.map((s) => (
+          {STATUS_ORDER.map((s) => (
             <button
-              key={s.key}
+              key={s}
               type="button"
               role="menuitemradio"
-              aria-checked={s.key === status}
-              onClick={() => {
-                setStatus(s.key);
-                setOpen(false);
-              }}
+              aria-checked={s === status}
+              onClick={() => selectStatus(s)}
               className="flex h-9 w-full items-center gap-2 px-3 text-sm text-text transition-colors duration-fast hover:bg-surface-raised focus:outline-none focus-visible:bg-surface-raised"
             >
-              <span className={cn("h-2 w-2 rounded-full", s.dot)} />
-              <span className="flex-1 text-left">{s.label}</span>
-              {s.key === status && (
+              <span className={cn("h-2 w-2 rounded-full", PRESENCE_DOT[s])} />
+              <span className="flex-1 text-left">{PRESENCE_LABEL[s]}</span>
+              {s === status && (
                 <span className="text-accent" aria-hidden="true">
                   ✓
                 </span>
