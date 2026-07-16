@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChannelDetail, UserSummary } from "@/lib/types";
 import { useChatMessages } from "@/lib/useChatMessages";
 import { useSocket } from "@/lib/useSocket";
+import { usePresence } from "@/lib/usePresence";
 import { ChannelHeader } from "./ChannelHeader";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
@@ -24,6 +25,7 @@ export function ChatView({
   const [channel, setChannel] = useState<ChannelDetail | null>(null);
   const [channelError, setChannelError] = useState<string | null>(null);
   const { emit } = useSocket();
+  const { getStatus } = usePresence();
   const {
     messages,
     loading,
@@ -81,6 +83,15 @@ export function ChatView({
     [nameById],
   );
 
+  // Members currently online or away (anyone not offline in the presence map).
+  const onlineCount = useMemo(
+    () =>
+      (channel?.members ?? []).filter(
+        (m) => getStatus(m.userId) !== "offline",
+      ).length,
+    [channel, getStatus],
+  );
+
   const onTypingStart = useCallback(
     () => emit("typing:start", { channelId }),
     [emit, channelId],
@@ -107,6 +118,7 @@ export function ChatView({
         name={channel?.name ?? "…"}
         description={channel?.description ?? null}
         memberCount={channel?.members.length ?? 0}
+        onlineCount={channel ? onlineCount : undefined}
       />
       <MessageList
         messages={messages}

@@ -1,9 +1,12 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { DmConversationSummary } from "@/lib/types";
+import { presenceRank, usePresence } from "@/lib/usePresence";
+import { StatusDot } from "@/components/chat/Avatar";
 import { useDMConversations } from "./DMConversationsProvider";
 
 /**
@@ -43,6 +46,15 @@ function preview(conversation: DmConversationSummary): string {
 export function DMList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { conversations, status } = useDMConversations();
+  const { getStatus } = usePresence();
+
+  // Sort online users first, then away, then offline. Array.sort is stable, so
+  // conversations at the same presence keep the store's recent-activity order.
+  const sorted = useMemo(() => {
+    const rank = (dm: DmConversationSummary) =>
+      dm.otherUser ? presenceRank(getStatus(dm.otherUser.id)) : 3;
+    return [...conversations].sort((a, b) => rank(a) - rank(b));
+  }, [conversations, getStatus]);
 
   if (status === "loading") {
     return (
@@ -66,7 +78,7 @@ export function DMList({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <ul className="space-y-0.5">
-      {conversations.map((dm) => {
+      {sorted.map((dm) => {
         const active = pathname === `/dm/${dm.id}`;
         const name = displayName(dm);
         const other = dm.otherUser;
@@ -83,7 +95,7 @@ export function DMList({ onNavigate }: { onNavigate?: () => void }) {
                   : "text-text-secondary hover:bg-surface-raised hover:text-text",
               )}
             >
-              <span className="relative shrink-0">
+              <span className="relative inline-flex shrink-0">
                 {other?.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -95,6 +107,12 @@ export function DMList({ onNavigate }: { onNavigate?: () => void }) {
                   <span className="flex h-avatar-sm w-avatar-sm items-center justify-center rounded-full bg-accent-muted text-[10px] font-semibold text-accent">
                     {initials(name)}
                   </span>
+                )}
+                {other && (
+                  <StatusDot
+                    status={getStatus(other.id)}
+                    sizeClass="h-2.5 w-2.5"
+                  />
                 )}
               </span>
               <span className="flex min-w-0 flex-1 flex-col">

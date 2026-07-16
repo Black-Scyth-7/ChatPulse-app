@@ -8,10 +8,13 @@ export function ChannelHeader({
   name,
   description,
   memberCount,
+  onlineCount,
 }: {
   name: string;
   description: string | null;
   memberCount: number;
+  /** Members currently online or away; appended as "Y online" when provided. */
+  onlineCount?: number;
 }) {
   return (
     <header className="flex h-topbar shrink-0 items-center gap-3 border-b border-border px-4">
@@ -33,6 +36,7 @@ export function ChannelHeader({
       )}
       <span className="ml-auto shrink-0 whitespace-nowrap text-sm text-text-muted">
         {memberCount} {memberCount === 1 ? "member" : "members"}
+        {onlineCount !== undefined && `, ${onlineCount} online`}
       </span>
     </header>
   );
