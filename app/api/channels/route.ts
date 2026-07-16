@@ -6,7 +6,8 @@ import type { ChannelSummary } from "@/lib/types";
 
 /**
  * GET /api/channels — list the channels the current user is a member of, with
- * a member count and the user's own role in each.
+ * a member count, the user's own role, and the count of unread messages in
+ * each (messages authored by others after the user's lastReadAt).
  */
 export async function GET(): Promise<NextResponse> {
   const auth = await requireSession();
@@ -18,13 +19,29 @@ export async function GET(): Promise<NextResponse> {
       _count: { select: { members: true } },
       members: {
         where: { userId: auth.userId },
-        select: { role: true },
+        select: { role: true, lastReadAt: true },
       },
     },
     orderBy: { createdAt: "asc" },
   });
 
-  const result: ChannelSummary[] = channels.map((c) => ({
+  // Unread = messages created after the member's lastReadAt, excluding their
+  // own messages and soft-deleted ones. Counted per channel in parallel.
+  const unreadCounts = await Promise.all(
+    channels.map((c) => {
+      const lastReadAt = c.members[0]?.lastReadAt ?? new Date(0);
+      return prisma.message.count({
+        where: {
+          channelId: c.id,
+          deletedAt: null,
+          authorId: { not: auth.userId },
+          createdAt: { gt: lastReadAt },
+        },
+      });
+    }),
+  );
+
+  const result: ChannelSummary[] = channels.map((c, i) => ({
     id: c.id,
     name: c.name,
     description: c.description,
@@ -34,6 +51,7 @@ export async function GET(): Promise<NextResponse> {
     updatedAt: c.updatedAt.toISOString(),
     memberCount: c._count.members,
     role: c.members[0]?.role,
+    unreadCount: unreadCounts[i] ?? 0,
   }));
 
   return NextResponse.json({ channels: result });
@@ -92,6 +110,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     updatedAt: channel.updatedAt.toISOString(),
     memberCount: channel._count.members,
     role: "OWNER",
+    unreadCount: 0,
   };
 
   return NextResponse.json({ channel: result }, { status: 201 });

@@ -13,14 +13,16 @@ import { MobileSidebar } from "./MobileSidebar";
  * surfaces (and the DM view) share one channel/DM fetch.
  */
 export function AppShell({
+  currentUserId,
   user,
   children,
 }: {
+  currentUserId: string;
   user: SidebarUser;
   children: React.ReactNode;
 }) {
   return (
-    <ChannelsProvider>
+    <ChannelsProvider currentUserId={currentUserId}>
       <DMConversationsProvider>
         <PresenceProvider>
           <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">

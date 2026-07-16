@@ -32,6 +32,8 @@ export async function GET(): Promise<NextResponse> {
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
     memberCount: c._count.members,
+    // Not joined yet, so there is nothing to have read/unread.
+    unreadCount: 0,
   }));
 
   return NextResponse.json({ channels: result });

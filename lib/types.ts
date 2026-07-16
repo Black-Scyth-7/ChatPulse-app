@@ -29,6 +29,8 @@ export interface ChannelSummary extends Channel {
   memberCount: number;
   /** The requesting user's role in the channel, when they are a member. */
   role?: ChannelRole;
+  /** Messages authored by others after the user's lastReadAt in this channel. */
+  unreadCount: number;
 }
 
 /** A single member entry in a channel's member list. */
