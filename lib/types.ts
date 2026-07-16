@@ -51,3 +51,20 @@ export interface Message {
   body: string;
   createdAt: string;
 }
+
+/** A channel message with its author, as returned by the messages history API. */
+export interface MessageWithAuthor {
+  id: ID;
+  channelId: ID;
+  authorId: ID;
+  body: string;
+  editedAt: string | null;
+  createdAt: string;
+  author: UserSummary;
+}
+
+/** Paginated channel message history response. */
+export interface MessagesPage {
+  messages: MessageWithAuthor[];
+  nextCursor: string | null;
+}
