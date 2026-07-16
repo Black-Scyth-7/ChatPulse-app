@@ -48,6 +48,7 @@ export function MessageList({
   hasMore,
   error,
   currentUserId,
+  canModify = true,
   onEdit,
   onDelete,
   loadOlder,
@@ -58,6 +59,8 @@ export function MessageList({
   hasMore: boolean;
   error: string | null;
   currentUserId: string;
+  /** Whether messages expose edit/delete actions (false for DMs). */
+  canModify?: boolean;
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string) => void;
   loadOlder: () => void;
@@ -164,6 +167,7 @@ export function MessageList({
               message={msg}
               showHeader={showHeader}
               isOwn={msg.authorId === currentUserId}
+              canModify={canModify}
               onEdit={onEdit}
               onDelete={onDelete}
             />

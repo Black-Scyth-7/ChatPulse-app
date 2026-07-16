@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ChannelList } from "./ChannelList";
 import { DMList } from "./DMList";
 import { CreateChannelModal } from "./CreateChannelModal";
+import { UserPicker } from "./UserPicker";
 
 /**
  * Full channel sidebar: user section at top, a scrollable body with the
@@ -183,6 +184,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [dmPickerOpen, setDmPickerOpen] = useState(false);
 
   return (
     <aside
@@ -204,8 +206,7 @@ export function Sidebar({
         <SectionHeading
           label="Direct Messages"
           addLabel="Start a direct message"
-          // DM creation lands in a later task; button is a no-op for now.
-          onAdd={() => {}}
+          onAdd={() => setDmPickerOpen(true)}
         />
         <DMList onNavigate={onNavigate} />
       </div>
@@ -214,6 +215,7 @@ export function Sidebar({
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
+      <UserPicker open={dmPickerOpen} onClose={() => setDmPickerOpen(false)} />
     </aside>
   );
 }
