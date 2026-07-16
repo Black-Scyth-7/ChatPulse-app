@@ -191,7 +191,7 @@ async function main() {
 
   const generalMessages = generalBodies.map((body, i) => ({
     channelId: general.id,
-    authorId: generalAuthors[i % generalAuthors.length].id,
+    authorId: generalAuthors[i % generalAuthors.length]!.id,
     body,
     // Oldest first: message 0 is ~200 min ago, most recent ~10 min ago.
     createdAt: minutesAgo(200 - i * 10),
