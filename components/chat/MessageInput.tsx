@@ -28,6 +28,7 @@ export function MessageInput({
   channelName,
   placeholder,
   disabled,
+  focusKey,
   onSend,
   onTypingStart,
   onTypingStop,
@@ -36,6 +37,11 @@ export function MessageInput({
   /** Override the composer placeholder; defaults to `Message #<channelName>`. */
   placeholder?: string;
   disabled?: boolean;
+  /**
+   * Changing this value re-focuses the composer — pass the channel/conversation
+   * id so navigating between conversations lands the cursor in the input.
+   */
+  focusKey?: string;
   onSend: (body: string) => void;
   onTypingStart: () => void;
   onTypingStop: () => void;
@@ -70,6 +76,14 @@ export function MessageInput({
 
   // Clean up the typing signal if the composer unmounts mid-type.
   useEffect(() => stopTyping, [stopTyping]);
+
+  // Auto-focus the composer on mount and whenever the conversation changes, so
+  // switching channels/DMs lands the cursor ready to type. Skipped when the
+  // composer is disabled (nothing to type into).
+  useEffect(() => {
+    if (disabled) return;
+    textareaRef.current?.focus({ preventScroll: true });
+  }, [focusKey, disabled]);
 
   const signalTyping = useCallback(() => {
     if (!typingRef.current) {

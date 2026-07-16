@@ -5,6 +5,7 @@ import type { ChannelDetail, UserSummary } from "@/lib/types";
 import { useChatMessages } from "@/lib/useChatMessages";
 import { useSocket } from "@/lib/useSocket";
 import { usePresence } from "@/lib/usePresence";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { ChannelHeader } from "./ChannelHeader";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
@@ -32,11 +33,15 @@ export function ChatView({
     loadingMore,
     hasMore,
     error,
+    reload,
     loadOlder,
     sendMessage,
     editMessage,
     deleteMessage,
   } = useChatMessages(channelId, currentUser);
+
+  // Page title: "ChatPulse — #general" once the channel name resolves.
+  useDocumentTitle(channel ? `#${channel.name}` : null);
 
   // Load channel detail (header info + member roster for typing names).
   useEffect(() => {
@@ -130,6 +135,7 @@ export function ChatView({
         onEdit={editMessage}
         onDelete={deleteMessage}
         loadOlder={loadOlder}
+        onRetry={reload}
       />
       <TypingIndicator
         channelId={channelId}
@@ -138,6 +144,7 @@ export function ChatView({
       />
       <MessageInput
         channelName={channel?.name ?? ""}
+        focusKey={channelId}
         onSend={sendMessage}
         onTypingStart={onTypingStart}
         onTypingStop={onTypingStop}

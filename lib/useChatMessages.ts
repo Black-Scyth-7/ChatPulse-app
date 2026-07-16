@@ -28,6 +28,8 @@ export interface UseChatMessages {
   error: string | null;
   /** Whether the realtime socket is connected. */
   connected: boolean;
+  /** Re-run the initial history load (used by the error-state retry button). */
+  reload: () => void;
   /** Fetch the next older page and prepend it. */
   loadOlder: () => void;
   /** Optimistically send a message over the socket. */
@@ -85,6 +87,9 @@ export function useChatMessages(
   const [error, setError] = useState<string | null>(null);
   const cursorRef = useRef<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  // Bump to force the initial-load effect to re-run (retry after an error).
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const reload = useCallback(() => setReloadNonce((n) => n + 1), []);
 
   // --- Initial history load (and reset when the channel changes) -----------
   useEffect(() => {
@@ -118,7 +123,7 @@ export function useChatMessages(
     return () => {
       cancelled = true;
     };
-  }, [channelId]);
+  }, [channelId, reloadNonce]);
 
   // --- Live socket subscriptions -------------------------------------------
   useEffect(() => {
@@ -275,6 +280,7 @@ export function useChatMessages(
     hasMore,
     error,
     connected,
+    reload,
     loadOlder,
     sendMessage,
     editMessage,

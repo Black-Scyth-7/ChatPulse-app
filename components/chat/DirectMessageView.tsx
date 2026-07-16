@@ -6,6 +6,7 @@ import type { PresenceStatus } from "@/lib/socket-events";
 import type { UserSummary } from "@/lib/types";
 import { useDirectMessages } from "@/lib/useDirectMessages";
 import { PRESENCE_DOT, PRESENCE_LABEL, usePresence } from "@/lib/usePresence";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useDMConversations } from "@/components/sidebar/DMConversationsProvider";
 import { Avatar } from "./Avatar";
 import { MessageList } from "./MessageList";
@@ -65,6 +66,7 @@ export function DirectMessageView({
     loadingMore,
     hasMore,
     error,
+    reload,
     loadOlder,
     sendMessage,
   } = useDirectMessages(conversationId, currentUser);
@@ -74,6 +76,9 @@ export function DirectMessageView({
     () => other?.name ?? other?.email ?? "user",
     [other],
   );
+
+  // Page title: "ChatPulse — DM with Ada" once the participant resolves.
+  useDocumentTitle(other ? `DM with ${composerName}` : null);
 
   // Conversation isn't in the loaded list and the list has settled — most
   // likely an id that doesn't belong to this user (or was never created).
@@ -104,10 +109,12 @@ export function DirectMessageView({
         onEdit={noop}
         onDelete={noop}
         loadOlder={loadOlder}
+        onRetry={reload}
       />
       <MessageInput
         channelName={composerName}
         placeholder={`Message ${composerName}`}
+        focusKey={conversationId}
         onSend={sendMessage}
         onTypingStart={noop}
         onTypingStop={noop}

@@ -45,6 +45,8 @@ interface ChannelsContextValue {
   totalUnread: number;
   /** Clear a channel's badge and persist the read marker on the server. */
   markRead: (channelId: string) => void;
+  /** Refetch the channel list (used by the error-state retry button). */
+  reload: () => void;
 }
 
 const ChannelsContext = createContext<ChannelsContextValue | null>(null);
@@ -60,6 +62,12 @@ export function ChannelsProvider({
   const [channels, setChannels] = useState<ChannelSummary[]>([]);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [unread, setUnread] = useState<Record<string, number>>({});
+  // Bump to force the channel-list fetch to re-run (retry after an error).
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const reload = useCallback(() => {
+    setStatus("loading");
+    setReloadNonce((n) => n + 1);
+  }, []);
 
   const pathname = usePathname();
   const activeChannelId = activeChannelFromPath(pathname);
@@ -88,7 +96,7 @@ export function ChannelsProvider({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadNonce]);
 
   const addChannel = useCallback((channel: ChannelSummary) => {
     setChannels((prev) =>
@@ -170,6 +178,7 @@ export function ChannelsProvider({
         unreadFor,
         totalUnread,
         markRead,
+        reload,
       }}
     >
       {children}

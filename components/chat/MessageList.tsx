@@ -3,6 +3,7 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
 import { format, isSameDay, isToday, isYesterday } from "date-fns";
 import type { ChatMessage } from "@/lib/useChatMessages";
+import { MessageListSkeleton } from "@/components/ui/Skeleton";
 import { MessageItem } from "./MessageItem";
 
 /** How close to the bottom (px) still counts as "following" the conversation. */
@@ -52,6 +53,7 @@ export function MessageList({
   onEdit,
   onDelete,
   loadOlder,
+  onRetry,
 }: {
   messages: ChatMessage[];
   loading: boolean;
@@ -64,6 +66,8 @@ export function MessageList({
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string) => void;
   loadOlder: () => void;
+  /** Retry the initial history load; enables the error-state retry button. */
+  onRetry?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -96,14 +100,16 @@ export function MessageList({
     const prev = prevRef.current;
 
     if (prev.count === 0 && messages.length > 0) {
+      // First load: jump to the latest message instantly (no animation).
       el.scrollTop = el.scrollHeight;
     } else if (first !== prev.firstId && last === prev.lastId) {
-      // Older page prepended above the current view.
+      // Older page prepended above the current view — hold position, no anim.
       el.scrollTop = el.scrollTop + (el.scrollHeight - prev.scrollHeight);
     } else if (last !== prev.lastId && messages.length > prev.count) {
       const lastMsg = messages[messages.length - 1];
       if (atBottomRef.current || lastMsg?.authorId === currentUserId) {
-        el.scrollTop = el.scrollHeight;
+        // Smoothly follow a newly arrived/sent message into view.
+        el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
       }
     }
 
@@ -116,17 +122,25 @@ export function MessageList({
   }, [messages, currentUserId]);
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-sm text-text-muted">
-        Loading messages…
-      </div>
-    );
+    return <MessageListSkeleton />;
   }
 
   if (error) {
     return (
-      <div className="flex flex-1 items-center justify-center px-4 text-center text-sm text-danger">
-        {error}
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm text-danger">
+          Failed to load messages.
+          {onRetry ? " Retry?" : ""}
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="inline-flex h-8 items-center rounded border border-border bg-surface-raised px-3 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-overlay focus:outline-none focus-visible:shadow-focus"
+          >
+            Retry
+          </button>
+        )}
       </div>
     );
   }
@@ -150,8 +164,8 @@ export function MessageList({
         </p>
       )}
       {messages.length === 0 && (
-        <div className="flex h-full items-center justify-center text-sm text-text-muted">
-          No messages yet. Say hello!
+        <div className="flex h-full items-center justify-center px-4 text-center text-sm text-text-muted">
+          No messages yet — start the conversation!
         </div>
       )}
 

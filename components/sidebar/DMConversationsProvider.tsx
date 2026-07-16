@@ -30,6 +30,8 @@ interface DMConversationsContextValue {
   upsertConversation: (conversation: DmConversationSummary) => void;
   /** Look up a conversation by id (undefined if not loaded). */
   getConversation: (id: string) => DmConversationSummary | undefined;
+  /** Refetch the conversation list (used by the error-state retry button). */
+  reload: () => void;
 }
 
 const DMConversationsContext =
@@ -54,6 +56,12 @@ export function DMConversationsProvider({
     [],
   );
   const [status, setStatus] = useState<LoadStatus>("loading");
+  // Bump to force the conversation-list fetch to re-run (retry after an error).
+  const [reloadNonce, setReloadNonce] = useState(0);
+  const reload = useCallback(() => {
+    setStatus("loading");
+    setReloadNonce((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +81,7 @@ export function DMConversationsProvider({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadNonce]);
 
   const upsertConversation = useCallback(
     (conversation: DmConversationSummary) => {
@@ -127,7 +135,7 @@ export function DMConversationsProvider({
 
   return (
     <DMConversationsContext.Provider
-      value={{ conversations, status, upsertConversation, getConversation }}
+      value={{ conversations, status, upsertConversation, getConversation, reload }}
     >
       {children}
     </DMConversationsContext.Provider>
