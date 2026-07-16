@@ -27,6 +27,8 @@ import {
   channelRefSchema,
 } from "../lib/validators/message";
 import { dmSendSchema } from "../lib/validators/dm";
+import { presenceUpdateSchema } from "../lib/validators/presence";
+import { setIoServer, toUserStatus } from "../lib/presence";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -109,6 +111,10 @@ async function main() {
       credentials: true,
     },
   });
+
+  // Publish io so the Next.js API routes (which are bundled separately) can
+  // broadcast presence changes through the same server. See lib/presence.ts.
+  setIoServer(io);
 
   const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
   const secureCookie = (
@@ -224,9 +230,9 @@ async function main() {
       await prisma.user
         .update({ where: { id: userId }, data: { status: "ONLINE" } })
         .catch((e) => console.error("[socket] set online failed:", e));
-      for (const r of rooms) {
-        io.to(r).emit("presence:changed", { userId, status: "online" });
-      }
+      // Presence is global: every connected client tracks every user's status
+      // (DM lists, member lists, avatars), so broadcast to all, not just rooms.
+      io.emit("presence:changed", { userId, status: "online" });
     }
 
     console.log(`[socket] connected: ${socket.id} (user ${userId})`);
@@ -379,6 +385,22 @@ async function main() {
       });
     });
 
+    // -- presence:update ----------------------------------------------------
+    socket.on("presence:update", async (data) => {
+      const parsed = presenceUpdateSchema.safeParse(data);
+      if (!parsed.success) return;
+      const { status } = parsed.data;
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { status: toUserStatus(status), lastSeen: new Date() },
+        });
+        io.emit("presence:changed", { userId, status });
+      } catch (err) {
+        console.error("[socket] presence:update failed:", err);
+      }
+    });
+
     // -- channel:join / channel:leave --------------------------------------
     socket.on("channel:join", async (data, ack) => {
       const parsed = channelRefSchema.safeParse(data);
@@ -416,14 +438,11 @@ async function main() {
         offlineTimers.delete(userId);
         if (socketsByUser.has(userId)) return; // reconnected during the wait
         try {
-          const rooms = await channelRoomsForUser(userId);
           await prisma.user.update({
             where: { id: userId },
             data: { status: "OFFLINE", lastSeen: new Date() },
           });
-          for (const r of rooms) {
-            io.to(r).emit("presence:changed", { userId, status: "offline" });
-          }
+          io.emit("presence:changed", { userId, status: "offline" });
         } catch (err) {
           console.error("[socket] mark offline failed:", err);
         }
