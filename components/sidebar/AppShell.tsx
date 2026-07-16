@@ -1,5 +1,6 @@
 "use client";
 
+import { PresenceProvider } from "@/lib/usePresence";
 import { ChannelsProvider } from "./ChannelsProvider";
 import { DMConversationsProvider } from "./DMConversationsProvider";
 import { Sidebar, type SidebarUser } from "./Sidebar";
@@ -21,16 +22,18 @@ export function AppShell({
   return (
     <ChannelsProvider>
       <DMConversationsProvider>
-        <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
-          {/* Desktop sidebar (hidden below md) */}
-          <Sidebar user={user} className="hidden md:flex" />
+        <PresenceProvider>
+          <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
+            {/* Desktop sidebar (hidden below md) */}
+            <Sidebar user={user} className="hidden md:flex" />
 
-          {/* Main column: mobile header/drawer + page content */}
-          <div className="flex min-w-0 flex-1 flex-col">
-            <MobileSidebar user={user} />
-            <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+            {/* Main column: mobile header/drawer + page content */}
+            <div className="flex min-w-0 flex-1 flex-col">
+              <MobileSidebar user={user} />
+              <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+            </div>
           </div>
-        </div>
+        </PresenceProvider>
       </DMConversationsProvider>
     </ChannelsProvider>
   );

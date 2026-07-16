@@ -1,22 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { PresenceStatus } from "@/lib/socket-events";
 import type { UserSummary } from "@/lib/types";
 import { useDirectMessages } from "@/lib/useDirectMessages";
-import { useSocket } from "@/lib/useSocket";
+import { PRESENCE_DOT, PRESENCE_LABEL, usePresence } from "@/lib/usePresence";
 import { useDMConversations } from "@/components/sidebar/DMConversationsProvider";
 import { Avatar } from "./Avatar";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-
-/** Presence dot colour + label for the header status line. */
-const PRESENCE: Record<PresenceStatus, { dot: string; label: string }> = {
-  online: { dot: "bg-success", label: "Online" },
-  away: { dot: "bg-warning", label: "Away" },
-  offline: { dot: "bg-offline", label: "Offline" },
-};
 
 function DirectMessageHeader({
   other,
@@ -26,29 +19,19 @@ function DirectMessageHeader({
   status: PresenceStatus;
 }) {
   const name = other?.name ?? other?.email ?? "Direct message";
-  const presence = PRESENCE[status];
   return (
     <header className="flex h-topbar shrink-0 items-center gap-3 border-b border-border px-4">
       {other ? (
-        <span className="relative shrink-0">
-          <Avatar user={other} className="h-avatar w-avatar" />
-          <span
-            aria-hidden="true"
-            className={cn(
-              "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-surface",
-              presence.dot,
-            )}
-          />
-        </span>
+        <Avatar user={other} className="h-avatar w-avatar" status={status} />
       ) : null}
       <div className="min-w-0">
         <h1 className="truncate text-md font-semibold text-text">{name}</h1>
         <p className="flex items-center gap-1.5 text-xs text-text-muted">
           <span
             aria-hidden="true"
-            className={cn("h-2 w-2 rounded-full", presence.dot)}
+            className={cn("h-2 w-2 rounded-full", PRESENCE_DOT[status])}
           />
-          {presence.label}
+          {PRESENCE_LABEL[status]}
         </p>
       </div>
     </header>
@@ -73,8 +56,8 @@ export function DirectMessageView({
   const conversation = getConversation(conversationId);
   const other = conversation?.otherUser ?? null;
 
-  const { on, off } = useSocket();
-  const [presence, setPresence] = useState<PresenceStatus>("offline");
+  const { getStatus } = usePresence();
+  const presence = other ? getStatus(other.id) : "offline";
 
   const {
     messages,
@@ -85,19 +68,6 @@ export function DirectMessageView({
     loadOlder,
     sendMessage,
   } = useDirectMessages(conversationId, currentUser);
-
-  // Track the other participant's presence via the shared presence broadcast.
-  useEffect(() => {
-    setPresence("offline");
-    if (!other) return;
-    const onPresence = (data: { userId: string; status: PresenceStatus }) => {
-      if (data.userId === other.id) setPresence(data.status);
-    };
-    on("presence:changed", onPresence);
-    return () => {
-      off("presence:changed", onPresence);
-    };
-  }, [other, on, off]);
 
   const noop = useCallback(() => {}, []);
   const composerName = useMemo(
