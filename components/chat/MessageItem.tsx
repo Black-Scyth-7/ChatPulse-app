@@ -123,12 +123,15 @@ export function MessageItem({
   message,
   showHeader,
   isOwn,
+  canModify = true,
   onEdit,
   onDelete,
 }: {
   message: ChatMessage;
   showHeader: boolean;
   isOwn: boolean;
+  /** Whether edit/delete actions are available (false for DMs). */
+  canModify?: boolean;
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -137,7 +140,8 @@ export function MessageItem({
   const failed = message.status === "failed";
   const sending = message.status === "sending";
   // Own messages can be acted on, but not while still an optimistic placeholder.
-  const canAct = isOwn && !editing && message.status !== "sending" && !failed;
+  const canAct =
+    canModify && isOwn && !editing && message.status !== "sending" && !failed;
 
   return (
     <div

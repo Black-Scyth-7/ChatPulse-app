@@ -26,12 +26,15 @@ const MAX_TEXTAREA_HEIGHT = 132;
  */
 export function MessageInput({
   channelName,
+  placeholder,
   disabled,
   onSend,
   onTypingStart,
   onTypingStop,
 }: {
   channelName: string;
+  /** Override the composer placeholder; defaults to `Message #<channelName>`. */
+  placeholder?: string;
   disabled?: boolean;
   onSend: (body: string) => void;
   onTypingStart: () => void;
@@ -92,7 +95,7 @@ export function MessageInput({
           value={value}
           rows={1}
           disabled={disabled}
-          placeholder={`Message #${channelName}`}
+          placeholder={placeholder ?? `Message #${channelName}`}
           onChange={(e) => {
             setValue(e.target.value);
             if (e.target.value.trim()) signalTyping();
