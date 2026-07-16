@@ -65,6 +65,7 @@ export interface ClientToServerEvents {
   ) => void;
   "typing:start": (data: { channelId: string }) => void;
   "typing:stop": (data: { channelId: string }) => void;
+  "presence:update": (data: { status: PresenceStatus }) => void;
   "channel:join": (data: { channelId: string }, ack?: (res: Ack) => void) => void;
   "channel:leave": (data: { channelId: string }, ack?: (res: Ack) => void) => void;
   "dm:send": (
