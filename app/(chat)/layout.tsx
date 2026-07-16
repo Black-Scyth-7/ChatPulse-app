@@ -19,6 +19,7 @@ export default async function ChatLayout({
 
   return (
     <AppShell
+      currentUserId={session.user.id}
       user={{
         name: session.user.name ?? null,
         email: session.user.email ?? null,

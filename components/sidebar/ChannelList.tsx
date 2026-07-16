@@ -8,23 +8,9 @@ import { useChannels } from "./ChannelsProvider";
 
 /**
  * Scrollable list of the channels the user has joined. Renders each channel as
- * a link to `/channel/[id]`, highlights the active one, and shows an unread
- * badge. Unread counts are placeholder values until real read-state lands.
+ * a link to `/channel/[id]`, highlights the active one, and shows a live unread
+ * badge sourced from the shared channels store.
  */
-
-/**
- * Deterministic placeholder unread count keyed off the channel id, so the list
- * shows a believable mix of read/unread rows without any live data yet.
- * Replace with real per-channel unread state when presence lands.
- */
-function placeholderUnread(id: string): number {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  const buckets = [0, 0, 0, 3, 7, 12];
-  return buckets[hash % buckets.length] ?? 0;
-}
 
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -38,13 +24,14 @@ function UnreadBadge({ count }: { count: number }) {
 function ChannelListItem({
   channel,
   active,
+  unread,
   onNavigate,
 }: {
   channel: ChannelSummary;
   active: boolean;
+  unread: number;
   onNavigate?: () => void;
 }) {
-  const unread = placeholderUnread(channel.id);
   const hasUnread = unread > 0;
 
   return (
@@ -73,7 +60,7 @@ function ChannelListItem({
 }
 
 export function ChannelList({ onNavigate }: { onNavigate?: () => void }) {
-  const { channels, status } = useChannels();
+  const { channels, status, unreadFor } = useChannels();
   const pathname = usePathname();
 
   if (status === "loading") {
@@ -105,6 +92,7 @@ export function ChannelList({ onNavigate }: { onNavigate?: () => void }) {
           <ChannelListItem
             channel={channel}
             active={pathname === `/channel/${channel.id}`}
+            unread={unreadFor(channel.id)}
             onNavigate={onNavigate}
           />
         </li>

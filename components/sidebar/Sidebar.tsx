@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { PresenceStatus } from "@/lib/socket-events";
 import { useSocket } from "@/lib/useSocket";
 import { PRESENCE_DOT, PRESENCE_LABEL } from "@/lib/usePresence";
+import { useChannels } from "./ChannelsProvider";
 import { ChannelList } from "./ChannelList";
 import { DMList } from "./DMList";
 import { CreateChannelModal } from "./CreateChannelModal";
@@ -143,15 +144,23 @@ function SectionHeading({
   label,
   onAdd,
   addLabel,
+  badge,
 }: {
   label: string;
   onAdd: () => void;
   addLabel: string;
+  /** Optional unread total shown beside the label. */
+  badge?: number;
 }) {
   return (
     <div className="flex items-center justify-between px-2 pb-1 pt-4">
-      <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-text-muted">
         {label}
+        {badge != null && badge > 0 && (
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold leading-none text-accent-fg">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
       </span>
       <button
         type="button"
@@ -179,6 +188,7 @@ export function Sidebar({
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
+  const { totalUnread } = useChannels();
 
   return (
     <aside
@@ -194,6 +204,7 @@ export function Sidebar({
           label="Channels"
           addLabel="Create channel"
           onAdd={() => setCreateOpen(true)}
+          badge={totalUnread}
         />
         <ChannelList onNavigate={onNavigate} />
 
