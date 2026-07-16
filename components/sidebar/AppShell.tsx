@@ -5,6 +5,7 @@ import { ChannelsProvider } from "./ChannelsProvider";
 import { DMConversationsProvider } from "./DMConversationsProvider";
 import { Sidebar, type SidebarUser } from "./Sidebar";
 import { MobileSidebar } from "./MobileSidebar";
+import { QuickSwitcher } from "./QuickSwitcher";
 
 /**
  * App shell for the authenticated chat area: fixed desktop sidebar + fluid main
@@ -35,6 +36,7 @@ export function AppShell({
               <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
             </div>
           </div>
+          <QuickSwitcher />
         </PresenceProvider>
       </DMConversationsProvider>
     </ChannelsProvider>

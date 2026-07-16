@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { DmConversationSummary } from "@/lib/types";
 import { presenceRank, usePresence } from "@/lib/usePresence";
 import { StatusDot } from "@/components/chat/Avatar";
+import { DMListSkeleton } from "@/components/ui/Skeleton";
 import { useDMConversations } from "./DMConversationsProvider";
 
 /**
@@ -45,7 +46,7 @@ function preview(conversation: DmConversationSummary): string {
 
 export function DMList({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { conversations, status } = useDMConversations();
+  const { conversations, status, reload } = useDMConversations();
   const { getStatus } = usePresence();
 
   // Sort online users first, then away, then offline. Array.sort is stable, so
@@ -57,14 +58,21 @@ export function DMList({ onNavigate }: { onNavigate?: () => void }) {
   }, [conversations, getStatus]);
 
   if (status === "loading") {
-    return (
-      <p className="px-2 py-1 text-xs text-text-muted">Loading…</p>
-    );
+    return <DMListSkeleton />;
   }
 
   if (status === "error") {
     return (
-      <p className="px-2 py-1 text-xs text-danger">Couldn&apos;t load DMs.</p>
+      <div className="px-2 py-1">
+        <p className="text-xs text-danger">Couldn&apos;t load DMs.</p>
+        <button
+          type="button"
+          onClick={reload}
+          className="mt-1 text-xs font-medium text-accent transition-colors duration-fast hover:text-accent-hover focus:outline-none focus-visible:shadow-focus"
+        >
+          Retry
+        </button>
+      </div>
     );
   }
 

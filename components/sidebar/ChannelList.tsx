@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { ChannelSummary } from "@/lib/types";
+import { ChannelListSkeleton } from "@/components/ui/Skeleton";
 import { useChannels } from "./ChannelsProvider";
 
 /**
@@ -60,20 +61,25 @@ function ChannelListItem({
 }
 
 export function ChannelList({ onNavigate }: { onNavigate?: () => void }) {
-  const { channels, status, unreadFor } = useChannels();
+  const { channels, status, unreadFor, reload } = useChannels();
   const pathname = usePathname();
 
   if (status === "loading") {
-    return (
-      <p className="px-2 py-1 text-sm text-text-muted">Loading channels…</p>
-    );
+    return <ChannelListSkeleton />;
   }
 
   if (status === "error") {
     return (
-      <p className="px-2 py-1 text-sm text-danger">
-        Couldn&apos;t load channels.
-      </p>
+      <div className="px-2 py-1">
+        <p className="text-sm text-danger">Couldn&apos;t load channels.</p>
+        <button
+          type="button"
+          onClick={reload}
+          className="mt-1 text-sm font-medium text-accent transition-colors duration-fast hover:text-accent-hover focus:outline-none focus-visible:shadow-focus"
+        >
+          Retry
+        </button>
+      </div>
     );
   }
 
