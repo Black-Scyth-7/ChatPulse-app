@@ -22,6 +22,17 @@ export interface SerializedMessage {
   editedAt: string | null;
 }
 
+/** A direct message shaped for realtime delivery. */
+export interface SerializedDirectMessage {
+  id: string;
+  conversationId: string;
+  body: string;
+  author: { id: string; name: string | null; image: string | null };
+  createdAt: string;
+  /** Non-null once the message has been edited. */
+  editedAt: string | null;
+}
+
 /** Standard ack envelope returned to the emitter via a callback. */
 export interface Ack {
   ok: boolean;
@@ -31,6 +42,11 @@ export interface Ack {
 /** Ack for message mutations, echoing the resulting message on success. */
 export interface MessageAck extends Ack {
   message?: SerializedMessage;
+}
+
+/** Ack for DM sends, echoing the resulting direct message on success. */
+export interface DirectMessageAck extends Ack {
+  message?: SerializedDirectMessage;
 }
 
 /** Events the client may emit to the server. */
@@ -51,6 +67,10 @@ export interface ClientToServerEvents {
   "typing:stop": (data: { channelId: string }) => void;
   "channel:join": (data: { channelId: string }, ack?: (res: Ack) => void) => void;
   "channel:leave": (data: { channelId: string }, ack?: (res: Ack) => void) => void;
+  "dm:send": (
+    data: { conversationId: string; content: string },
+    ack?: (res: DirectMessageAck) => void,
+  ) => void;
 }
 
 /** Events the server broadcasts to clients. */
@@ -64,6 +84,7 @@ export interface ServerToClientEvents {
     userId: string;
     isTyping: boolean;
   }) => void;
+  "dm:new": (data: SerializedDirectMessage) => void;
 }
 
 /** Per-socket state populated by the auth middleware. */

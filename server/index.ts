@@ -26,10 +26,12 @@ import {
   messageDeleteSchema,
   channelRefSchema,
 } from "../lib/validators/message";
+import { dmSendSchema } from "../lib/validators/dm";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
   SerializedMessage,
+  SerializedDirectMessage,
   SocketData,
 } from "../lib/socket-events";
 
@@ -41,6 +43,7 @@ const port = Number(process.env.PORT ?? 3000);
 const OFFLINE_GRACE_MS = 30_000;
 
 const room = (channelId: string) => `channel:${channelId}`;
+const dmRoom = (conversationId: string) => `dm:${conversationId}`;
 
 /** Shape a Prisma message (with its author) for the wire. */
 function serializeMessage(m: {
@@ -54,6 +57,25 @@ function serializeMessage(m: {
   return {
     id: m.id,
     channelId: m.channelId,
+    body: m.body,
+    author: { id: m.author.id, name: m.author.name, image: m.author.image },
+    createdAt: m.createdAt.toISOString(),
+    editedAt: m.editedAt ? m.editedAt.toISOString() : null,
+  };
+}
+
+/** Shape a Prisma direct message (with its author) for the wire. */
+function serializeDirectMessage(m: {
+  id: string;
+  conversationId: string;
+  body: string;
+  createdAt: Date;
+  editedAt: Date | null;
+  author: { id: string; name: string | null; image: string | null };
+}): SerializedDirectMessage {
+  return {
+    id: m.id,
+    conversationId: m.conversationId,
     body: m.body,
     author: { id: m.author.id, name: m.author.name, image: m.author.image },
     createdAt: m.createdAt.toISOString(),
@@ -118,6 +140,26 @@ async function main() {
     return membership !== null;
   }
 
+  /** DM rooms a user belongs to, joined on connect so `dm:new` reaches them. */
+  async function dmRoomsForUser(userId: string): Promise<string[]> {
+    const parts = await prisma.directConversationParticipant.findMany({
+      where: { userId },
+      select: { conversationId: true },
+    });
+    return parts.map((p) => dmRoom(p.conversationId));
+  }
+
+  async function isParticipant(
+    userId: string,
+    conversationId: string,
+  ): Promise<boolean> {
+    const participation = await prisma.directConversationParticipant.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+      select: { id: true },
+    });
+    return participation !== null;
+  }
+
   // --- Auth middleware -----------------------------------------------------
   io.use(async (socket, nextFn) => {
     try {
@@ -172,6 +214,11 @@ async function main() {
     // Auto-join every channel room the user is a member of.
     const rooms = await channelRoomsForUser(userId);
     for (const r of rooms) socket.join(r);
+
+    // Auto-join every DM conversation room the user participates in, so a
+    // `dm:new` broadcast reaches both participants wherever they're connected.
+    const dmRooms = await dmRoomsForUser(userId);
+    for (const r of dmRooms) socket.join(r);
 
     if (firstConnection) {
       await prisma.user
@@ -273,6 +320,38 @@ async function main() {
       } catch (err) {
         console.error("[socket] message:delete failed:", err);
         ack?.({ ok: false, error: "Failed to delete message" });
+      }
+    });
+
+    // -- dm:send ------------------------------------------------------------
+    socket.on("dm:send", async (data, ack) => {
+      try {
+        const parsed = dmSendSchema.safeParse(data);
+        if (!parsed.success) {
+          return ack?.({ ok: false, error: "Invalid DM payload" });
+        }
+        const { conversationId, content } = parsed.data;
+        if (!(await isParticipant(userId, conversationId))) {
+          return ack?.({
+            ok: false,
+            error: "Not a participant in this conversation",
+          });
+        }
+        const created = await prisma.directMessage.create({
+          data: { body: content, conversationId, authorId: userId },
+          include: authorSelect,
+        });
+        // Bump the conversation so DM lists order by most-recent activity.
+        await prisma.directConversation.update({
+          where: { id: conversationId },
+          data: { updatedAt: new Date() },
+        });
+        const payload = serializeDirectMessage(created);
+        io.to(dmRoom(conversationId)).emit("dm:new", payload);
+        ack?.({ ok: true, message: payload });
+      } catch (err) {
+        console.error("[socket] dm:send failed:", err);
+        ack?.({ ok: false, error: "Failed to send direct message" });
       }
     });
 

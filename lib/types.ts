@@ -68,3 +68,40 @@ export interface MessagesPage {
   messages: MessageWithAuthor[];
   nextCursor: string | null;
 }
+
+/** A direct message with its author, as returned by the DM history API. */
+export interface DirectMessageWithAuthor {
+  id: ID;
+  conversationId: ID;
+  authorId: ID;
+  body: string;
+  editedAt: string | null;
+  createdAt: string;
+  author: UserSummary;
+}
+
+/** Paginated DM history response (same shape/pattern as MessagesPage). */
+export interface DirectMessagesPage {
+  messages: DirectMessageWithAuthor[];
+  nextCursor: string | null;
+}
+
+/** A short preview of the most recent message in a conversation, for DM lists. */
+export interface DirectMessagePreview {
+  id: ID;
+  authorId: ID;
+  body: string;
+  createdAt: string;
+}
+
+/**
+ * A DM conversation as shown in the sidebar list: the other participant plus a
+ * preview of the last message. `otherUser` is null in the degenerate case of a
+ * self-conversation or one whose partner account was deleted.
+ */
+export interface DmConversationSummary {
+  id: ID;
+  otherUser: UserSummary | null;
+  lastMessage: DirectMessagePreview | null;
+  updatedAt: string;
+}
