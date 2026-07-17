@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import type { PresenceStatus } from "@/lib/socket-events";
 import { useSocket } from "@/lib/useSocket";
@@ -134,6 +135,20 @@ function UserSection({ user }: { user: SidebarUser }) {
               )}
             </button>
           ))}
+
+          <div className="my-1 h-px bg-border" role="separator" />
+
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              void signOut({ callbackUrl: "/login" });
+            }}
+            className="flex h-9 w-full items-center gap-2 px-3 text-sm text-danger transition-colors duration-fast hover:bg-surface-raised focus:outline-none focus-visible:bg-surface-raised"
+          >
+            <span className="flex-1 text-left">Sign out</span>
+          </button>
         </div>
       )}
     </div>
