@@ -80,6 +80,8 @@ export interface ServerToClientEvents {
   "message:new": (data: SerializedMessage) => void;
   "message:updated": (data: SerializedMessage) => void;
   "message:deleted": (data: { id: string; channelId: string }) => void;
+  /** A channel was deleted by its owner; members should drop it from their UI. */
+  "channel:deleted": (data: { channelId: string }) => void;
   "typing:update": (data: {
     channelId: string;
     userId: string;
