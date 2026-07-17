@@ -57,7 +57,7 @@ model User {
   @@index([status])
 }
 
-/// OAuth account link (Google / GitHub). Matches the NextAuth Prisma adapter.
+/// OAuth account link (GitHub). Matches the NextAuth Prisma adapter.
 model Account {
   id                String  @id @default(cuid())
   userId            String
