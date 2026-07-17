@@ -10,7 +10,7 @@ Specs and documentation for ChatPulse — a real-time team chat app.
 
 - **Framework:** Next.js (App Router) + TypeScript (strict).
 - **Styling:** Tailwind CSS (dark-first design system).
-- **Auth:** NextAuth (Auth.js) with the Prisma adapter (Google + GitHub).
+- **Auth:** NextAuth (Auth.js) with the Prisma adapter (GitHub).
 - **Database:** PostgreSQL via Prisma.
 - **Realtime:** Socket.io (standalone server in `/server`).
 - **Validation:** Zod.
