@@ -39,6 +39,8 @@ interface ChannelsContextValue {
   status: LoadStatus;
   /** Append a newly created channel (no-op if already present). */
   addChannel: (channel: ChannelSummary) => void;
+  /** Drop a channel from the list (e.g. after leaving) and clear its badge. */
+  removeChannel: (channelId: string) => void;
   /** Current unread count for a channel (0 if unknown). */
   unreadFor: (channelId: string) => number;
   /** Sum of unread counts across the user's channels. */
@@ -102,6 +104,16 @@ export function ChannelsProvider({
     setChannels((prev) =>
       prev.some((c) => c.id === channel.id) ? prev : [...prev, channel],
     );
+  }, []);
+
+  const removeChannel = useCallback((channelId: string) => {
+    setChannels((prev) => prev.filter((c) => c.id !== channelId));
+    setUnread((prev) => {
+      if (!(channelId in prev)) return prev;
+      const next = { ...prev };
+      delete next[channelId];
+      return next;
+    });
   }, []);
 
   const markRead = useCallback((channelId: string) => {
@@ -175,6 +187,7 @@ export function ChannelsProvider({
         channels,
         status,
         addChannel,
+        removeChannel,
         unreadFor,
         totalUnread,
         markRead,

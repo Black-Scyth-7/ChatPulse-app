@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ChannelDetail, UserSummary } from "@/lib/types";
 import { useChatMessages } from "@/lib/useChatMessages";
 import { useSocket } from "@/lib/useSocket";
 import { usePresence } from "@/lib/usePresence";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { useChannels } from "@/components/sidebar/ChannelsProvider";
 import { ChannelHeader } from "./ChannelHeader";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
@@ -25,6 +27,10 @@ export function ChatView({
 }) {
   const [channel, setChannel] = useState<ChannelDetail | null>(null);
   const [channelError, setChannelError] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState<string | null>(null);
+  const router = useRouter();
+  const { channels, removeChannel } = useChannels();
   const { emit } = useSocket();
   const { getStatus } = usePresence();
   const {
@@ -97,6 +103,36 @@ export function ChatView({
     [channel, getStatus],
   );
 
+  // The current user's role, used to gate the leave action (owners can't leave).
+  const myRole = useMemo(
+    () =>
+      channel?.members.find((m) => m.userId === currentUser.id)?.role ?? null,
+    [channel, currentUser.id],
+  );
+
+  const handleLeave = useCallback(async () => {
+    setLeaving(true);
+    setLeaveError(null);
+    try {
+      const res = await fetch(`/api/channels/${channelId}/leave`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        // Pick a channel to land on before dropping this one from the list.
+        const next = channels.find((c) => c.id !== channelId);
+        removeChannel(channelId);
+        router.push(next ? `/channel/${next.id}` : "/");
+        return;
+      }
+      const data: { error?: string } = await res.json().catch(() => ({}));
+      setLeaveError(data.error ?? "Couldn't leave the channel. Please try again.");
+    } catch {
+      setLeaveError("Network error. Please try again.");
+    } finally {
+      setLeaving(false);
+    }
+  }, [channelId, channels, removeChannel, router]);
+
   const onTypingStart = useCallback(
     () => emit("typing:start", { channelId }),
     [emit, channelId],
@@ -124,7 +160,18 @@ export function ChatView({
         description={channel?.description ?? null}
         memberCount={channel?.members.length ?? 0}
         onlineCount={channel ? onlineCount : undefined}
+        onLeave={channel ? handleLeave : undefined}
+        canLeave={myRole !== "OWNER"}
+        leaving={leaving}
       />
+      {leaveError && (
+        <p
+          role="alert"
+          className="border-b border-border bg-danger-muted px-4 py-2 text-sm text-danger"
+        >
+          {leaveError}
+        </p>
+      )}
       <MessageList
         messages={messages}
         loading={loading}

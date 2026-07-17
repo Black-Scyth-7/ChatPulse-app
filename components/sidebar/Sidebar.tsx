@@ -10,6 +10,7 @@ import { useChannels } from "./ChannelsProvider";
 import { ChannelList } from "./ChannelList";
 import { DMList } from "./DMList";
 import { CreateChannelModal } from "./CreateChannelModal";
+import { BrowseChannelsModal } from "./BrowseChannelsModal";
 import { UserPicker } from "./UserPicker";
 
 /**
@@ -155,15 +156,44 @@ function UserSection({ user }: { user: SidebarUser }) {
   );
 }
 
+function HeadingAction({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="flex h-5 w-5 items-center justify-center rounded text-text-muted transition-colors duration-fast hover:bg-surface-raised hover:text-text focus:outline-none focus-visible:shadow-focus"
+    >
+      <span aria-hidden="true" className="text-base leading-none">
+        {children}
+      </span>
+    </button>
+  );
+}
+
 function SectionHeading({
   label,
   onAdd,
   addLabel,
+  onBrowse,
+  browseLabel,
   badge,
 }: {
   label: string;
   onAdd: () => void;
   addLabel: string;
+  /** Optional secondary "browse" action shown before the add button. */
+  onBrowse?: () => void;
+  browseLabel?: string;
   /** Optional unread total shown beside the label. */
   badge?: number;
 }) {
@@ -177,17 +207,16 @@ function SectionHeading({
           </span>
         )}
       </span>
-      <button
-        type="button"
-        onClick={onAdd}
-        aria-label={addLabel}
-        title={addLabel}
-        className="flex h-5 w-5 items-center justify-center rounded text-text-muted transition-colors duration-fast hover:bg-surface-raised hover:text-text focus:outline-none focus-visible:shadow-focus"
-      >
-        <span aria-hidden="true" className="text-base leading-none">
+      <div className="flex items-center gap-0.5">
+        {onBrowse && browseLabel && (
+          <HeadingAction onClick={onBrowse} label={browseLabel}>
+            ⌕
+          </HeadingAction>
+        )}
+        <HeadingAction onClick={onAdd} label={addLabel}>
           +
-        </span>
-      </button>
+        </HeadingAction>
+      </div>
     </div>
   );
 }
@@ -202,6 +231,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const [browseOpen, setBrowseOpen] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const { totalUnread } = useChannels();
 
@@ -219,6 +249,8 @@ export function Sidebar({
           label="Channels"
           addLabel="Create channel"
           onAdd={() => setCreateOpen(true)}
+          browseLabel="Browse channels"
+          onBrowse={() => setBrowseOpen(true)}
           badge={totalUnread}
         />
         <ChannelList onNavigate={onNavigate} />
@@ -234,6 +266,10 @@ export function Sidebar({
       <CreateChannelModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
+      />
+      <BrowseChannelsModal
+        open={browseOpen}
+        onClose={() => setBrowseOpen(false)}
       />
       <UserPicker open={dmPickerOpen} onClose={() => setDmPickerOpen(false)} />
     </aside>
