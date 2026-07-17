@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
+import { broadcastChannelDeleted } from "@/lib/presence";
 import { updateChannelSchema } from "@/lib/validators/channel";
 import type { ChannelDetail } from "@/lib/types";
 
@@ -154,6 +155,10 @@ export async function DELETE(
   }
 
   await prisma.channel.delete({ where: { id } });
+
+  // Tell every connected member to drop the channel from their UI. Their sockets
+  // are still in the channel room, so this reaches them before they disconnect.
+  broadcastChannelDeleted(id);
 
   return NextResponse.json({ success: true });
 }

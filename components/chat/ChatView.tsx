@@ -29,6 +29,8 @@ export function ChatView({
   const [channelError, setChannelError] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const router = useRouter();
   const { channels, removeChannel } = useChannels();
   const { emit } = useSocket();
@@ -133,6 +135,39 @@ export function ChatView({
     }
   }, [channelId, channels, removeChannel, router]);
 
+  const handleDelete = useCallback(async () => {
+    if (
+      !window.confirm(
+        "Delete this channel? This removes it and all its messages for every member, and can't be undone.",
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/channels/${channelId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        // Drop it locally and navigate away; the channel:deleted broadcast does
+        // the same for every other member's sidebar.
+        const next = channels.find((c) => c.id !== channelId);
+        removeChannel(channelId);
+        router.push(next ? `/channel/${next.id}` : "/");
+        return;
+      }
+      const data: { error?: string } = await res.json().catch(() => ({}));
+      setDeleteError(
+        data.error ?? "Couldn't delete the channel. Please try again.",
+      );
+    } catch {
+      setDeleteError("Network error. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  }, [channelId, channels, removeChannel, router]);
+
   const onTypingStart = useCallback(
     () => emit("typing:start", { channelId }),
     [emit, channelId],
@@ -163,13 +198,15 @@ export function ChatView({
         onLeave={channel ? handleLeave : undefined}
         canLeave={myRole !== "OWNER"}
         leaving={leaving}
+        onDelete={channel && myRole === "OWNER" ? handleDelete : undefined}
+        deleting={deleting}
       />
-      {leaveError && (
+      {(leaveError || deleteError) && (
         <p
           role="alert"
           className="border-b border-border bg-danger-muted px-4 py-2 text-sm text-danger"
         >
-          {leaveError}
+          {leaveError ?? deleteError}
         </p>
       )}
       <MessageList
