@@ -4,9 +4,12 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Channel header bar: name, optional description, and member count. Sits at the
- * top of the chat view above the message list. When `onLeave` is provided, an
- * options menu (⋯) exposes a "Leave channel" action; channel owners can't leave
- * (`canLeave={false}`), so the item is shown disabled with an explanation.
+ * top of the chat view above the message list. When `onLeave` or `onDelete` is
+ * provided, an options menu (⋯) exposes the matching action:
+ *
+ *  - Non-owners get "Leave channel" (`onLeave` + `canLeave`).
+ *  - The owner can't leave, so instead gets an owner-only "Delete channel"
+ *    action (`onDelete`), which removes the channel for every member.
  */
 export function ChannelHeader({
   name,
@@ -16,18 +19,24 @@ export function ChannelHeader({
   onLeave,
   canLeave = true,
   leaving = false,
+  onDelete,
+  deleting = false,
 }: {
   name: string;
   description: string | null;
   memberCount: number;
   /** Members currently online or away; appended as "Y online" when provided. */
   onlineCount?: number;
-  /** Leave handler; when omitted, no options menu is rendered. */
+  /** Leave handler; when omitted, no leave item is shown. */
   onLeave?: () => void;
   /** False for owners, who can't leave their own channel. */
   canLeave?: boolean;
   /** True while a leave request is in flight. */
   leaving?: boolean;
+  /** Owner-only delete handler; when omitted, no delete item is shown. */
+  onDelete?: () => void;
+  /** True while a delete request is in flight. */
+  deleting?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,7 +76,7 @@ export function ChannelHeader({
         {onlineCount !== undefined && `, ${onlineCount} online`}
       </span>
 
-      {onLeave && (
+      {(onLeave || onDelete) && (
         <div ref={ref} className="relative shrink-0">
           <button
             type="button"
@@ -87,7 +96,7 @@ export function ChannelHeader({
               role="menu"
               className="absolute right-0 top-full z-dropdown mt-1 min-w-48 rounded-md border border-border bg-surface-overlay py-1 shadow-md"
             >
-              {canLeave ? (
+              {onLeave && canLeave && (
                 <button
                   type="button"
                   role="menuitem"
@@ -100,7 +109,22 @@ export function ChannelHeader({
                 >
                   {leaving ? "Leaving…" : "Leave channel"}
                 </button>
-              ) : (
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={deleting}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete();
+                  }}
+                  className="flex h-9 w-full items-center px-3 text-sm text-danger transition-colors duration-fast hover:bg-surface-raised focus:outline-none focus-visible:bg-surface-raised disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {deleting ? "Deleting…" : "Delete channel"}
+                </button>
+              )}
+              {onLeave && !canLeave && !onDelete && (
                 <div className="px-3 py-2 text-xs text-text-muted">
                   Owners can&apos;t leave their own channel.
                 </div>

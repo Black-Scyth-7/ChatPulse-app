@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ChannelSummary } from "@/lib/types";
 import type { SerializedMessage } from "@/lib/socket-events";
 import { useSocket } from "@/lib/useSocket";
@@ -71,11 +71,16 @@ export function ChannelsProvider({
     setReloadNonce((n) => n + 1);
   }, []);
 
+  const router = useRouter();
   const pathname = usePathname();
   const activeChannelId = activeChannelFromPath(pathname);
   // Read the active channel from inside the socket handler without resubscribing.
   const activeRef = useRef<string | null>(activeChannelId);
   activeRef.current = activeChannelId;
+  // Same trick for the channel list, so the delete handler can pick a channel to
+  // fall back to without re-subscribing on every list change.
+  const channelsRef = useRef<ChannelSummary[]>(channels);
+  channelsRef.current = channels;
 
   useEffect(() => {
     let cancelled = false;
@@ -168,6 +173,22 @@ export function ChannelsProvider({
       if (activeReadTimer) clearTimeout(activeReadTimer);
     };
   }, [on, off, currentUserId]);
+
+  // A channel was deleted by its owner: drop it from every member's sidebar and,
+  // if it's the one they're viewing, navigate them to another channel (or home).
+  useEffect(() => {
+    const onDeleted = ({ channelId }: { channelId: string }) => {
+      if (activeRef.current === channelId) {
+        const next = channelsRef.current.find((c) => c.id !== channelId);
+        router.push(next ? `/channel/${next.id}` : "/");
+      }
+      removeChannel(channelId);
+    };
+    on("channel:deleted", onDeleted);
+    return () => {
+      off("channel:deleted", onDeleted);
+    };
+  }, [on, off, removeChannel, router]);
 
   const unreadFor = useCallback(
     (channelId: string) => unread[channelId] ?? 0,

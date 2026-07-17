@@ -56,3 +56,16 @@ export function toUserStatus(status: PresenceStatus): UserStatus {
 export function broadcastPresence(userId: string, status: PresenceStatus): void {
   getIoServer()?.emit("presence:changed", { userId, status });
 }
+
+/**
+ * Notify a channel's members that it was deleted, so every connected member can
+ * drop it from their sidebar (and navigate away if it's the open channel). The
+ * emit targets the channel room, which still holds each member's socket at the
+ * moment of deletion — DB cascade deletes don't touch in-memory room state. A
+ * no-op if the realtime server isn't running.
+ */
+export function broadcastChannelDeleted(channelId: string): void {
+  getIoServer()
+    ?.to(`channel:${channelId}`)
+    .emit("channel:deleted", { channelId });
+}
