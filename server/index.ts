@@ -235,7 +235,7 @@ async function main() {
       io.emit("presence:changed", { userId, status: "online" });
     }
 
-    console.log(`[socket] connected: ${socket.id} (user ${userId})`);
+    if (dev) console.log(`[socket] connected: ${socket.id} (user ${userId})`);
 
     // -- message:send -------------------------------------------------------
     socket.on("message:send", async (data, ack) => {
@@ -426,7 +426,7 @@ async function main() {
 
     // -- disconnect ---------------------------------------------------------
     socket.on("disconnect", (reason) => {
-      console.log(`[socket] disconnected: ${socket.id} (${reason})`);
+      if (dev) console.log(`[socket] disconnected: ${socket.id} (${reason})`);
       const set = socketsByUser.get(userId);
       if (!set) return;
       set.delete(socket.id);
@@ -452,7 +452,11 @@ async function main() {
   });
 
   httpServer.listen(port, () => {
-    console.log(`[chatpulse] ready on http://${hostname}:${port} (Next + Socket.io)`);
+    if (dev) {
+      console.log(
+        `[chatpulse] ready on http://${hostname}:${port} (Next + Socket.io)`,
+      );
+    }
   });
 }
 
