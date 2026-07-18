@@ -34,6 +34,7 @@ import type {
   ServerToClientEvents,
   SerializedMessage,
   SerializedDirectMessage,
+  MessageStatus,
   SocketData,
 } from "../lib/socket-events";
 
@@ -54,6 +55,7 @@ function serializeMessage(m: {
   body: string;
   createdAt: Date;
   editedAt: Date | null;
+  status: MessageStatus;
   author: { id: string; name: string | null; image: string | null };
 }): SerializedMessage {
   return {
@@ -63,6 +65,7 @@ function serializeMessage(m: {
     author: { id: m.author.id, name: m.author.name, image: m.author.image },
     createdAt: m.createdAt.toISOString(),
     editedAt: m.editedAt ? m.editedAt.toISOString() : null,
+    status: m.status,
   };
 }
 
@@ -73,6 +76,7 @@ function serializeDirectMessage(m: {
   body: string;
   createdAt: Date;
   editedAt: Date | null;
+  status: MessageStatus;
   author: { id: string; name: string | null; image: string | null };
 }): SerializedDirectMessage {
   return {
@@ -82,6 +86,7 @@ function serializeDirectMessage(m: {
     author: { id: m.author.id, name: m.author.name, image: m.author.image },
     createdAt: m.createdAt.toISOString(),
     editedAt: m.editedAt ? m.editedAt.toISOString() : null,
+    status: m.status,
   };
 }
 
@@ -166,6 +171,70 @@ async function main() {
     return participation !== null;
   }
 
+  /**
+   * Mark a channel's messages DELIVERED for `recipientId` (WhatsApp double check).
+   * A recipient connecting to the room means every message authored by someone
+   * else has reached their client. We bump those SENT rows to DELIVERED and, if
+   * any changed, tell the room how far delivery now reaches so each author flips
+   * their own check marks. READ rows are left untouched (READ outranks DELIVERED).
+   */
+  async function deliverChannel(
+    recipientId: string,
+    channelId: string,
+  ): Promise<void> {
+    const res = await prisma.message.updateMany({
+      where: {
+        channelId,
+        authorId: { not: recipientId },
+        status: "SENT",
+        deletedAt: null,
+      },
+      data: { status: "DELIVERED" },
+    });
+    if (res.count === 0) return;
+    const latest = await prisma.message.findFirst({
+      where: { channelId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (latest) {
+      io.to(room(channelId)).emit("message:delivered", {
+        channelId,
+        userId: recipientId,
+        deliveredUpTo: latest.id,
+      });
+    }
+  }
+
+  /** DM counterpart of {@link deliverChannel}. */
+  async function deliverConversation(
+    recipientId: string,
+    conversationId: string,
+  ): Promise<void> {
+    const res = await prisma.directMessage.updateMany({
+      where: {
+        conversationId,
+        authorId: { not: recipientId },
+        status: "SENT",
+        deletedAt: null,
+      },
+      data: { status: "DELIVERED" },
+    });
+    if (res.count === 0) return;
+    const latest = await prisma.directMessage.findFirst({
+      where: { conversationId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (latest) {
+      io.to(dmRoom(conversationId)).emit("dm:delivered", {
+        conversationId,
+        userId: recipientId,
+        deliveredUpTo: latest.id,
+      });
+    }
+  }
+
   // --- Auth middleware -----------------------------------------------------
   io.use(async (socket, nextFn) => {
     try {
@@ -229,6 +298,19 @@ async function main() {
     // `dm:new` broadcast reaches both participants wherever they're connected.
     const dmRooms = await dmRoomsForUser(userId);
     for (const r of dmRooms) socket.join(r);
+
+    // Now that this recipient is connected, everything they can see is at least
+    // DELIVERED. Idempotent: a second tab finds nothing left in SENT and no-ops.
+    for (const r of rooms) {
+      await deliverChannel(userId, r.slice("channel:".length)).catch((e) =>
+        console.error("[socket] deliverChannel failed:", e),
+      );
+    }
+    for (const r of dmRooms) {
+      await deliverConversation(userId, r.slice("dm:".length)).catch((e) =>
+        console.error("[socket] deliverConversation failed:", e),
+      );
+    }
 
     if (firstConnection) {
       await prisma.user
@@ -416,6 +498,10 @@ async function main() {
         return ack?.({ ok: false, error: "Not a member of this channel" });
       }
       socket.join(room(channelId));
+      // Joining the room delivers the channel's backlog to this recipient.
+      await deliverChannel(userId, channelId).catch((e) =>
+        console.error("[socket] deliverChannel (join) failed:", e),
+      );
       ack?.({ ok: true });
     });
 

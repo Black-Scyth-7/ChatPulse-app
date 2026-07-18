@@ -86,3 +86,30 @@ export function broadcastChannelInvited(
     ?.to(`user:${userId}`)
     .emit("channel:invited", { channelId: channel.id, channel });
 }
+
+/**
+ * Notify a channel's members that `userId` read everything up to `readUpTo`, so
+ * message authors can flip their own check marks to READ. Emitted from the REST
+ * read route (POST /api/channels/[id]/read), which runs in the Next bundle and
+ * reaches the live server through the shared io. No-op if the server isn't up.
+ */
+export function broadcastMessageRead(
+  channelId: string,
+  userId: string,
+  readUpTo: string,
+): void {
+  getIoServer()
+    ?.to(`channel:${channelId}`)
+    .emit("message:read", { channelId, userId, readUpTo });
+}
+
+/** DM counterpart of {@link broadcastMessageRead}, targeting the DM room. */
+export function broadcastDmRead(
+  conversationId: string,
+  userId: string,
+  readUpTo: string,
+): void {
+  getIoServer()
+    ?.to(`dm:${conversationId}`)
+    .emit("dm:read", { conversationId, userId, readUpTo });
+}
