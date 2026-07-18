@@ -116,3 +116,36 @@ export interface DmConversationSummary {
   lastMessage: DirectMessagePreview | null;
   updatedAt: string;
 }
+
+/** REST-facing message status (lowercase), as surfaced in the unified list. */
+export type MessageStatusWire = "sent" | "delivered" | "read";
+
+/**
+ * The last-message preview carried by a unified conversation list item. `status`
+ * is present only for messages the requesting user sent (their own read receipt),
+ * and null otherwise.
+ */
+export interface ConversationLastMessage {
+  /** Body truncated to 100 characters for the sidebar preview. */
+  content: string;
+  senderName: string;
+  timestamp: string;
+  status: MessageStatusWire | null;
+}
+
+/**
+ * One entry in the WhatsApp-style unified conversation list (GET
+ * /api/conversations): channels and DMs interleaved by most-recent activity.
+ * `image` is null for channels (no channel icon in the model). `isOnline` is
+ * populated only for DMs — the other participant's presence — and null for
+ * channels.
+ */
+export interface ConversationListItem {
+  id: ID;
+  type: "channel" | "dm";
+  name: string;
+  image: string | null;
+  lastMessage: ConversationLastMessage | null;
+  unreadCount: number;
+  isOnline: boolean | null;
+}
