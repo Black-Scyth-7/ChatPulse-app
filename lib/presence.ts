@@ -17,6 +17,7 @@ import type {
   PresenceStatus,
   SocketData,
 } from "./socket-events";
+import type { ChannelSummary } from "./types";
 
 /** The concrete Socket.io server type used across ChatPulse. */
 export type AppServer = Server<
@@ -68,4 +69,20 @@ export function broadcastChannelDeleted(channelId: string): void {
   getIoServer()
     ?.to(`channel:${channelId}`)
     .emit("channel:deleted", { channelId });
+}
+
+/**
+ * Notify a freshly-invited user that they were added to a channel, so their
+ * connected clients can add it to the sidebar without a refresh. Targets the
+ * user's personal room (`user:{userId}`), which they join on connect regardless
+ * of channel membership. `channel` is shaped from the invited user's point of
+ * view (their role and unread count). A no-op if the realtime server isn't up.
+ */
+export function broadcastChannelInvited(
+  userId: string,
+  channel: ChannelSummary,
+): void {
+  getIoServer()
+    ?.to(`user:${userId}`)
+    .emit("channel:invited", { channelId: channel.id, channel });
 }

@@ -5,8 +5,13 @@
  *
  * Room convention: every channel maps to the room `channel:{channelId}`. A
  * socket is joined to a channel room only after its membership is verified, so
- * `io.to("channel:{id}")` reaches exactly the channel's members.
+ * `io.to("channel:{id}")` reaches exactly the channel's members. Each socket
+ * also joins its owner's personal room `user:{userId}`, so events can be
+ * addressed to a specific user regardless of channel membership (e.g. inviting
+ * them to a channel they aren't in yet).
  */
+
+import type { ChannelSummary } from "./types";
 
 /** Presence values as broadcast over the wire (lowercase; DB uses UserStatus). */
 export type PresenceStatus = "online" | "offline" | "away";
@@ -82,6 +87,14 @@ export interface ServerToClientEvents {
   "message:deleted": (data: { id: string; channelId: string }) => void;
   /** A channel was deleted by its owner; members should drop it from their UI. */
   "channel:deleted": (data: { channelId: string }) => void;
+  /**
+   * The recipient was invited to (added as a member of) a channel; their client
+   * should add it to the sidebar. Addressed to the invited user's personal room.
+   */
+  "channel:invited": (data: {
+    channelId: string;
+    channel: ChannelSummary;
+  }) => void;
   "typing:update": (data: {
     channelId: string;
     userId: string;
