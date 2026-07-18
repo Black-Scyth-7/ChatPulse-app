@@ -11,7 +11,7 @@ import { useChannels } from "@/components/sidebar/ChannelsProvider";
 import { ChannelHeader } from "./ChannelHeader";
 import { InviteModal } from "./InviteModal";
 import { MessageList } from "./MessageList";
-import { MessageInput } from "./MessageInput";
+import { ChatInput } from "./ChatInput";
 import { TypingIndicator } from "./TypingIndicator";
 
 /**
@@ -239,8 +239,7 @@ export function ChatView({
         currentUserId={currentUser.id}
         resolveName={resolveName}
       />
-      <MessageInput
-        channelName={channel?.name ?? ""}
+      <ChatInput
         focusKey={channelId}
         onSend={sendMessage}
         onTypingStart={onTypingStart}

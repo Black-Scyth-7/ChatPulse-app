@@ -11,7 +11,7 @@ import { useDMConversations } from "@/components/sidebar/DMConversationsProvider
 import { Avatar } from "./Avatar";
 import { BackToListButton } from "./BackToListButton";
 import { MessageList } from "./MessageList";
-import { MessageInput } from "./MessageInput";
+import { ChatInput } from "./ChatInput";
 
 function DirectMessageHeader({
   other,
@@ -113,8 +113,7 @@ export function DirectMessageView({
         loadOlder={loadOlder}
         onRetry={reload}
       />
-      <MessageInput
-        channelName={composerName}
+      <ChatInput
         placeholder={`Message ${composerName}`}
         focusKey={conversationId}
         onSend={sendMessage}
