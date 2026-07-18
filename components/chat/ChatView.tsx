@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import type { ChannelDetail, UserSummary } from "@/lib/types";
 import { useChatMessages } from "@/lib/useChatMessages";
 import { useSocket } from "@/lib/useSocket";
-import { usePresence } from "@/lib/usePresence";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useChannels } from "@/components/sidebar/ChannelsProvider";
-import { ChannelHeader } from "./ChannelHeader";
+import { ChatHeader } from "./ChatHeader";
 import { InviteModal } from "./InviteModal";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
@@ -36,7 +35,6 @@ export function ChatView({
   const router = useRouter();
   const { channels, removeChannel } = useChannels();
   const { emit } = useSocket();
-  const { getStatus } = usePresence();
   const {
     messages,
     loading,
@@ -98,14 +96,15 @@ export function ChatView({
     [nameById],
   );
 
-  // Members currently online or away (anyone not offline in the presence map).
-  const onlineCount = useMemo(
-    () =>
-      (channel?.members ?? []).filter(
-        (m) => getStatus(m.userId) !== "offline",
-      ).length,
-    [channel, getStatus],
-  );
+  // Member display names for the header preview, current user first as "You".
+  const memberNames = useMemo(() => {
+    const names: string[] = [];
+    for (const m of channel?.members ?? []) {
+      if (m.userId === currentUser.id) names.unshift("You");
+      else names.push(m.user.name ?? m.user.email ?? "Someone");
+    }
+    return names;
+  }, [channel, currentUser.id]);
 
   // The current user's role, used to gate the leave action (owners can't leave).
   const myRole = useMemo(
@@ -192,11 +191,10 @@ export function ChatView({
 
   return (
     <div className="flex h-full flex-col">
-      <ChannelHeader
+      <ChatHeader
+        variant="channel"
         name={channel?.name ?? "…"}
-        description={channel?.description ?? null}
-        memberCount={channel?.members.length ?? 0}
-        onlineCount={channel ? onlineCount : undefined}
+        memberNames={memberNames}
         onLeave={channel ? handleLeave : undefined}
         canLeave={myRole !== "OWNER"}
         leaving={leaving}
