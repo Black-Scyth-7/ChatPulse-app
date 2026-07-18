@@ -131,6 +131,8 @@ export interface ConversationLastMessage {
   senderName: string;
   timestamp: string;
   status: MessageStatusWire | null;
+  /** True when the requesting user authored this message (drives the "You:" preview prefix). */
+  isOwn: boolean;
 }
 
 /**
@@ -148,4 +150,9 @@ export interface ConversationListItem {
   lastMessage: ConversationLastMessage | null;
   unreadCount: number;
   isOnline: boolean | null;
+  /**
+   * The other participant's user id for DMs (null for channels). Lets the list
+   * subscribe to that user's live presence rather than the fetch-time snapshot.
+   */
+  otherUserId: ID | null;
 }

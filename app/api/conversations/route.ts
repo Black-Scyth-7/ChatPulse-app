@@ -131,6 +131,7 @@ export async function GET(): Promise<NextResponse> {
           timestamp: last.createdAt.toISOString(),
           // Status is meaningful only for my own messages' read receipts.
           status: last.authorId === me ? toWireStatus(last.status) : null,
+          isOwn: last.authorId === me,
         }
       : null;
     entries.push({
@@ -142,6 +143,7 @@ export async function GET(): Promise<NextResponse> {
         lastMessage,
         unreadCount: channelUnread[i] ?? 0,
         isOnline: null, // Online status is a DM-only concept.
+        otherUserId: null, // Channels have no single "other" participant.
       },
       sortAt: (last?.createdAt ?? c.createdAt).getTime(),
     });
@@ -156,6 +158,7 @@ export async function GET(): Promise<NextResponse> {
           senderName: last.author.name ?? "Unknown",
           timestamp: last.createdAt.toISOString(),
           status: last.authorId === me ? toWireStatus(last.status) : null,
+          isOwn: last.authorId === me,
         }
       : null;
     entries.push({
@@ -169,6 +172,7 @@ export async function GET(): Promise<NextResponse> {
         // Presence is DB-backed: anything but OFFLINE counts as online (see
         // GET /api/users/online). Null when the partner account is missing.
         isOnline: other ? other.status !== "OFFLINE" : null,
+        otherUserId: other?.id ?? null,
       },
       sortAt: (last?.createdAt ?? c.createdAt).getTime(),
     });

@@ -1,17 +1,31 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { PresenceProvider } from "@/lib/usePresence";
+import {
+  ConversationList,
+  type ConversationListUser,
+} from "@/components/conversations/ConversationList";
+import { ConversationsProvider } from "@/components/conversations/ConversationsProvider";
 import { ChannelsProvider } from "./ChannelsProvider";
 import { DMConversationsProvider } from "./DMConversationsProvider";
-import { Sidebar, type SidebarUser } from "./Sidebar";
-import { MobileSidebar } from "./MobileSidebar";
 import { QuickSwitcher } from "./QuickSwitcher";
 
 /**
- * App shell for the authenticated chat area: fixed desktop sidebar + fluid main
- * column, with the sidebar collapsing to a mobile drawer below `md`. Wraps
- * everything in `ChannelsProvider` + `DMConversationsProvider` so both sidebar
- * surfaces (and the DM view) share one channel/DM fetch.
+ * App shell for the authenticated chat area: a WhatsApp-style two-pane layout.
+ *
+ * Desktop (`md`+): the conversation list (30%) and the chat view (70%) sit side
+ * by side, both always visible.
+ *
+ * Mobile: one pane at a time. With no conversation open, the list fills the
+ * screen; opening a channel/DM swaps in the chat view (the header's back arrow
+ * returns to the list). Whether a conversation is "open" is derived from the
+ * route (`/channel/[id]` or `/dm/[id]`).
+ *
+ * `ChannelsProvider` + `DMConversationsProvider` still back the chat views
+ * (channel detail, DM header presence), while `ConversationsProvider` owns the
+ * unified list. All share one socket + presence context.
  */
 export function AppShell({
   currentUserId,
@@ -19,24 +33,39 @@ export function AppShell({
   children,
 }: {
   currentUserId: string;
-  user: SidebarUser;
+  user: ConversationListUser;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const hasActiveConversation =
+    /^\/channel\/[^/]+/.test(pathname) || /^\/dm\/[^/]+/.test(pathname);
+
   return (
     <ChannelsProvider currentUserId={currentUserId}>
       <DMConversationsProvider>
         <PresenceProvider>
-          <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
-            {/* Desktop sidebar (hidden below md) */}
-            <Sidebar user={user} className="hidden md:flex" />
-
-            {/* Main column: mobile header/drawer + page content */}
-            <div className="flex min-w-0 flex-1 flex-col">
-              <MobileSidebar user={user} />
-              <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+          <ConversationsProvider currentUserId={currentUserId}>
+            <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
+              <ConversationList
+                user={user}
+                className={cn(
+                  "w-full md:w-list",
+                  // Mobile: hidden while a chat is open. Desktop: always shown.
+                  hasActiveConversation ? "hidden md:flex" : "flex",
+                )}
+              />
+              <main
+                className={cn(
+                  "min-w-0 flex-1 flex-col",
+                  // Mobile: shown only when a chat is open. Desktop: always shown.
+                  hasActiveConversation ? "flex" : "hidden md:flex",
+                )}
+              >
+                {children}
+              </main>
             </div>
-          </div>
-          <QuickSwitcher />
+            <QuickSwitcher />
+          </ConversationsProvider>
         </PresenceProvider>
       </DMConversationsProvider>
     </ChannelsProvider>

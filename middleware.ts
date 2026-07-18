@@ -10,8 +10,8 @@ import { authConfig } from "@/lib/auth.config";
  * /api/auth/* and static assets are never intercepted.
  *
  * Behaviour:
- *  - Unauthenticated visit to /channel/* or /dm/* -> redirect to /login.
- *  - Authenticated visit to /login -> redirect into the app (/channel/general).
+ *  - Unauthenticated visit to / or /channel/* or /dm/* -> redirect to /login.
+ *  - Authenticated visit to /login -> redirect to the conversation list (/).
  */
 const { auth } = NextAuth(authConfig);
 
@@ -20,6 +20,7 @@ export default auth((req) => {
   const isLoggedIn = Boolean(req.auth);
 
   const isProtectedRoute =
+    nextUrl.pathname === "/" ||
     nextUrl.pathname.startsWith("/channel") ||
     nextUrl.pathname.startsWith("/dm");
   const isLoginRoute = nextUrl.pathname === "/login";
@@ -29,7 +30,7 @@ export default auth((req) => {
   }
 
   if (isLoginRoute && isLoggedIn) {
-    return Response.redirect(new URL("/channel/general", nextUrl));
+    return Response.redirect(new URL("/", nextUrl));
   }
 
   return undefined;
@@ -41,5 +42,5 @@ export default auth((req) => {
  * without interference.
  */
 export const config = {
-  matcher: ["/channel/:path*", "/dm/:path*", "/login"],
+  matcher: ["/", "/channel/:path*", "/dm/:path*", "/login"],
 };
