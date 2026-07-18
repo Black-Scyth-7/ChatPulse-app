@@ -51,6 +51,7 @@ function toChatMessage(
     body: m.body,
     editedAt: m.editedAt,
     createdAt: m.createdAt,
+    status: m.status,
     author: {
       id: author.id,
       name: author.name,
@@ -138,13 +139,13 @@ export function useDirectMessages(
         if (incoming.authorId === currentUser.id) {
           const pendingIdx = prev.findIndex(
             (m) =>
-              m.status === "sending" &&
+              m.sendState === "sending" &&
               m.clientId &&
               m.body === incoming.body,
           );
           if (pendingIdx !== -1) {
             const next = [...prev];
-            next[pendingIdx] = { ...incoming, status: "sent" };
+            next[pendingIdx] = { ...incoming, sendState: "sent" };
             return next;
           }
         }
@@ -202,7 +203,10 @@ export function useDirectMessages(
         editedAt: null,
         createdAt: new Date().toISOString(),
         author: currentUser,
-        status: "sending",
+        // Server delivery state defaults to SENT; sendState drives the
+        // optimistic pending/failed UI until the ack lands.
+        status: "SENT",
+        sendState: "sending",
       };
       setMessages((prev) => [...prev, optimistic]);
 
@@ -219,14 +223,14 @@ export function useDirectMessages(
               if (!stillPending) return prev;
               return prev.map((m) =>
                 m.clientId === clientId
-                  ? { ...confirmed, status: "sent" }
+                  ? { ...confirmed, sendState: "sent" }
                   : m,
               );
             });
           } else {
             setMessages((prev) =>
               prev.map((m) =>
-                m.clientId === clientId ? { ...m, status: "failed" } : m,
+                m.clientId === clientId ? { ...m, sendState: "failed" } : m,
               ),
             );
           }

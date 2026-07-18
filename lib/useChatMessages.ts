@@ -10,8 +10,12 @@ export type SendStatus = "sending" | "sent" | "failed";
 
 /** A message as held in the client store, with optional optimistic metadata. */
 export interface ChatMessage extends MessageWithAuthor {
-  /** Set while a locally-sent message is unconfirmed or has failed. */
-  status?: SendStatus;
+  /**
+   * Optimistic send state of a locally-originated message, distinct from the
+   * server delivery `status` (SENT/DELIVERED/READ) inherited from
+   * MessageWithAuthor. Set while the send is unconfirmed or has failed.
+   */
+  sendState?: SendStatus;
   /** Client-only correlation id for the optimistic placeholder. */
   clientId?: string;
 }
@@ -51,6 +55,7 @@ function fromSerialized(m: SerializedMessage): ChatMessage {
     body: m.body,
     editedAt: m.editedAt,
     createdAt: m.createdAt,
+    status: m.status,
     author: {
       id: m.author.id,
       name: m.author.name,
@@ -137,13 +142,13 @@ export function useChatMessages(
         if (incoming.authorId === currentUser.id) {
           const pendingIdx = prev.findIndex(
             (m) =>
-              m.status === "sending" &&
+              m.sendState === "sending" &&
               m.clientId &&
               m.body === incoming.body,
           );
           if (pendingIdx !== -1) {
             const next = [...prev];
-            next[pendingIdx] = { ...incoming, status: "sent" };
+            next[pendingIdx] = { ...incoming, sendState: "sent" };
             return next;
           }
         }
@@ -218,7 +223,10 @@ export function useChatMessages(
         editedAt: null,
         createdAt: new Date().toISOString(),
         author: currentUser,
-        status: "sending",
+        // Server delivery state defaults to SENT; sendState drives the
+        // optimistic pending/failed UI until the ack lands.
+        status: "SENT",
+        sendState: "sending",
       };
       setMessages((prev) => [...prev, optimistic]);
 
@@ -232,14 +240,14 @@ export function useChatMessages(
             if (!stillPending) return prev;
             return prev.map((m) =>
               m.clientId === clientId
-                ? { ...confirmed, status: "sent" }
+                ? { ...confirmed, sendState: "sent" }
                 : m,
             );
           });
         } else {
           setMessages((prev) =>
             prev.map((m) =>
-              m.clientId === clientId ? { ...m, status: "failed" } : m,
+              m.clientId === clientId ? { ...m, sendState: "failed" } : m,
             ),
           );
         }
