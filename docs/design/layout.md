@@ -1,21 +1,30 @@
-# Layout Spec — ChatPulse
+# Layout Spec — ChatPulse (WhatsApp-inspired)
 
-Defines the app shell: workspace rail, channel sidebar, main content area,
-message list, channel header, and the message composer. All dimensions map to
-tokens in `tokens.md` and `tailwind.config.ts`. Exact Tailwind classes are given
-for every region.
+Defines the app shell: a **two-panel** messenger — conversation list (left) and
+chat view (right). There is **no separate sidebar**; the conversation list *is*
+the left panel. Each panel has its own top bar (not a shared header). All
+dimensions map to tokens in `tokens.md` and `tailwind.config.ts`.
 
 ---
 
-## 1. App shell (root grid)
+## 1. App shell (root)
 
-Full-viewport horizontal layout: fixed rail → fixed sidebar → fluid main.
+Full-viewport horizontal split: conversation list (30%) + chat view (70%).
 
 ```
-┌──────┬─────────────┬──────────────────────────────────────┐
-│ rail │  sidebar    │  main                                 │
-│ 72px │   260px     │  flex-1 (fills remaining width)       │
-└──────┴─────────────┴──────────────────────────────────────┘
+┌───────────────────┬──────────────────────────────────────────┐
+│ conversation list │  chat view                                │
+│   30% (min 300px) │  70% (flex-1)                             │
+│  ┌─────────────┐  │  ┌────────────────────────────────────┐  │
+│  │ list top bar│  │  │ chat header (avatar · name · ⋮)     │  │
+│  ├─────────────┤  │  ├────────────────────────────────────┤  │
+│  │ search      │  │  │                                     │  │
+│  ├─────────────┤  │  │  message list (wallpaper bg)        │  │
+│  │ chat rows   │  │  │                                     │  │
+│  │  …          │  │  ├────────────────────────────────────┤  │
+│  │             │  │  │ input bar                           │  │
+│  └─────────────┘  │  └────────────────────────────────────┘  │
+└───────────────────┴──────────────────────────────────────────┘
 ```
 
 **Root container**
@@ -24,153 +33,118 @@ Full-viewport horizontal layout: fixed rail → fixed sidebar → fluid main.
 <div class="flex h-screen w-screen overflow-hidden bg-bg text-text font-sans">
 ```
 
-| Region  | Width               | Classes                                    |
-| ------- | ------------------- | ------------------------------------------ |
-| Rail    | 72px fixed          | `w-sidebar-rail shrink-0`                  |
-| Sidebar | 260px fixed         | `w-sidebar shrink-0`                        |
-| Main    | fills remaining     | `flex-1 min-w-0` (min-w-0 prevents overflow)|
+| Region            | Width           | Classes                                   |
+| ----------------- | --------------- | ----------------------------------------- |
+| Conversation list | 30% (min 300px) | `w-list min-w-[300px] max-w-[440px] shrink-0` |
+| Chat view         | 70% fills rest  | `flex-1 min-w-0` (min-w-0 prevents overflow) |
+
+WhatsApp caps the list width in practice; `min-w-[300px] max-w-[440px]` keeps
+rows readable on wide and narrow desktops while honoring the 30% target.
 
 ---
 
-## 2. Workspace rail (far left)
+## 2. Conversation list panel (left)
 
-Vertical column of workspace icons + add button.
+Own top bar → search → scrollable list of conversation rows. Background `panel`.
 
 ```html
-<nav class="w-sidebar-rail shrink-0 h-full bg-bg
-            flex flex-col items-center gap-2 py-3
-            border-r border-border-subtle">
+<aside class="w-list min-w-[300px] max-w-[440px] shrink-0 h-full bg-panel
+              flex flex-col border-r border-border-subtle">
 ```
 
-- Icon buttons: `w-12 h-12 rounded-lg` (active: `rounded-md ring-2 ring-accent`)
-- Vertical gap between icons: `gap-2` (8px)
-- Vertical padding: `py-3` (12px)
+| Section       | Height / behavior | Classes                                                        |
+| ------------- | ----------------- | -------------------------------------------------------------- |
+| List top bar  | 60px fixed        | `h-topbar shrink-0 flex items-center justify-between px-4 bg-header` |
+| Search        | auto              | `shrink-0` — search input (`components.md §9.2`)                |
+| Conversations | fills, scrolls    | `flex-1 overflow-y-auto`                                        |
 
----
-
-## 3. Channel sidebar
-
-Fixed 260px column: workspace header, scrollable channel list, user footer.
+**List top bar** — your own avatar on the left, action icons (new chat, menu)
+on the right:
 
 ```html
-<aside class="w-sidebar shrink-0 h-full bg-surface
-              flex flex-col border-r border-border">
+<header class="h-topbar shrink-0 flex items-center justify-between px-4 bg-header">
+  <img class="w-avatar h-avatar rounded-full object-cover" alt="You" />
+  <div class="flex items-center gap-1 text-text-secondary">
+    <button class="p-2 rounded-full hover:bg-surface-raised" aria-label="New chat">✎</button>
+    <button class="p-2 rounded-full hover:bg-surface-raised" aria-label="Menu">⋮</button>
+  </div>
+</header>
 ```
 
-| Section          | Height / behavior      | Classes                                              |
-| ---------------- | ---------------------- | ---------------------------------------------------- |
-| Workspace header | 56px fixed             | `h-topbar shrink-0 flex items-center px-4 font-semibold text-md border-b border-border` |
-| Channel list     | fills, scrolls         | `flex-1 overflow-y-auto py-2 px-2 space-y-0.5`       |
-| Section label    | —                      | `px-2 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-text-muted` |
-| User footer      | 56px fixed             | `h-topbar shrink-0 flex items-center gap-2 px-3 border-t border-border` |
-
-Channel list item spec lives in `components.md §3`.
+Conversation row spec lives in `components.md §1`.
 
 ---
 
-## 4. Main content area
+## 3. Chat view (right)
 
-Vertical stack: channel header → message list → composer.
+Vertical stack: chat header → message list (wallpaper) → input bar.
 
 ```html
 <main class="flex-1 min-w-0 h-full flex flex-col bg-bg">
 ```
 
-| Region         | Height              | Classes                              |
-| -------------- | ------------------- | ------------------------------------ |
-| Channel header | 56px fixed          | see §5                               |
-| Message list   | fills, scrolls      | see §6                               |
-| Composer       | auto (min 44px)     | see §7                               |
+| Region       | Height           | Classes                          |
+| ------------ | ---------------- | -------------------------------- |
+| Chat header  | 60px fixed       | `components.md §3`               |
+| Message list | fills, scrolls   | see §4                           |
+| Input bar    | auto (min 42px)  | `components.md §4`               |
+
+**Empty state** (no chat selected) — center a muted illustration + line on the
+`bg` canvas; the list panel stays visible.
 
 ---
 
-## 5. Channel header (top bar)
+## 4. Message list
 
-```html
-<header class="h-topbar shrink-0 flex items-center justify-between
-               px-4 border-b border-border bg-bg z-sticky">
-  <div class="flex items-center gap-2 min-w-0">
-    <span class="text-text-muted">#</span>
-    <h1 class="text-lg font-semibold truncate">general</h1>
-  </div>
-  <div class="flex items-center gap-1"><!-- actions --></div>
-</header>
-```
-
-- Height: `h-topbar` (56px)
-- Horizontal padding: `px-4` (16px)
-- Title: `text-lg font-semibold truncate`
-- Divider: `border-b border-border`
-
----
-
-## 6. Message list
-
-Scrollable, reverse-flow feel with comfortable vertical rhythm.
+Scrollable, wallpaper background, comfortable vertical rhythm. Bubbles align
+left/right per sender (`components.md §2`).
 
 ```html
 <div class="flex-1 overflow-y-auto overflow-x-hidden
-            px-4 py-4 space-y-1 scroll-smooth">
+            bg-bg bg-[url('/chat-wallpaper.png')] bg-repeat
+            py-3 scroll-smooth">
 ```
 
-| Property                  | Value            | Class            |
-| ------------------------- | ---------------- | ---------------- |
-| Horizontal padding        | 16px             | `px-4`           |
-| Vertical padding          | 16px             | `py-4`           |
-| Gap between message rows  | 4px              | `space-y-1`      |
-| Gap between message groups| 16px             | `mt-4` on new group |
-| Day divider               | centered pill    | `my-4 flex items-center gap-3` |
+| Property                    | Value        | Class                                |
+| --------------------------- | ------------ | ------------------------------------ |
+| Vertical padding            | 12px         | `py-3`                               |
+| Horizontal inset per bubble | 5% each side | `px-[5%]` on each bubble wrapper      |
+| Gap between bubbles         | 2px          | `py-0.5` on wrapper                   |
+| Gap between groups          | 12px         | `mt-3` on first bubble of a new group |
+| Day divider                 | centered pill| `my-3 flex justify-center`           |
 
-**Message row** (grouped — avatar + content): full spec in `components.md §1`.
-Content column is width-constrained for readability:
-
-```html
-<div class="max-w-[720px]">  <!-- message text column cap -->
-```
-
----
-
-## 7. Message composer (input area)
-
-Anchored bottom, grows with content up to a cap.
+**Day divider** (e.g. "TODAY"):
 
 ```html
-<div class="shrink-0 px-4 pb-4 pt-1 bg-bg">
-  <div class="flex items-end gap-2 rounded-md border border-border-strong
-              bg-surface-raised px-3 py-2
-              focus-within:border-accent focus-within:shadow-focus
-              transition-colors duration-fast">
-    <button class="p-2 rounded text-text-secondary hover:text-text hover:bg-surface-overlay"><!-- attach --></button>
-    <textarea
-      class="flex-1 min-h-composer max-h-[200px] resize-none bg-transparent
-             text-md text-text placeholder:text-text-muted
-             focus:outline-none py-2"
-      placeholder="Message #general"></textarea>
-    <button class="p-2 rounded bg-accent text-accent-fg hover:bg-accent-hover
-                   disabled:bg-surface-overlay disabled:text-text-muted"><!-- send --></button>
-  </div>
-  <p class="mt-1 px-1 text-xs text-text-muted">Enter to send · Shift+Enter for newline</p>
+<div class="my-3 flex justify-center">
+  <span class="px-3 py-1 rounded-md bg-surface text-tick uppercase
+               text-text-secondary shadow-sm">Today</span>
 </div>
 ```
 
-| Property               | Value                | Class                    |
-| ---------------------- | -------------------- | ------------------------ |
-| Outer padding          | 16px sides, 16px btm | `px-4 pb-4 pt-1`         |
-| Field min height       | 44px                 | `min-h-composer`         |
-| Field max height       | 200px then scroll    | `max-h-[200px]`          |
-| Field padding          | 12px x / 8px y        | `px-3 py-2`              |
-| Field radius           | 8px                  | `rounded-md`             |
-| Focus ring             | accent               | `focus-within:shadow-focus focus-within:border-accent` |
-
 ---
 
-## 8. Responsive behavior
+## 5. Responsive behavior
 
-| Breakpoint         | Behavior                                                       |
-| ------------------ | ------------------------------------------------------------- |
-| `< md` (<768px)    | Sidebar collapses to overlay drawer: `fixed inset-y-0 left-0 z-modal` toggled; main is full width. Rail hidden behind hamburger. |
-| `md` (≥768px)      | Rail hidden, sidebar visible: `hidden md:flex` on sidebar.     |
-| `lg` (≥1024px)     | Full three-column shell (rail + sidebar + main) visible.       |
+WhatsApp mobile shows **either** the conversation list **or** the chat view —
+never both. Desktop shows both panels side by side.
 
-Root grid stays `flex`; use `hidden lg:flex` on the rail and `hidden md:flex` on
-the sidebar to progressively reveal columns.
+| Breakpoint      | Behavior                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `< md` (<768px) | Single full-screen view. Default = conversation list (`w-full`); opening a chat swaps to the chat view (`w-full`), chat header shows a back button (`md:hidden`). Only one panel is mounted/visible at a time. |
+| `≥ md` (≥768px) | Two-panel split: list `w-list min-w-[300px]` + chat `flex-1`, both always visible.       |
+
+Implementation: drive visibility from an `activeChatId` state.
+
+```html
+<!-- mobile: toggle which panel is shown -->
+<aside class="w-full md:w-list md:min-w-[300px] md:max-w-[440px] shrink-0
+              {{activeChatId ? 'hidden md:flex' : 'flex'}}">…list…</aside>
+<main  class="w-full flex-1 min-w-0
+              {{activeChatId ? 'flex' : 'hidden md:flex'}}">…chat…</main>
+```
+
+- On mobile, the chat header's back button clears `activeChatId` to return to
+  the list.
+- On desktop, both panels render regardless of `activeChatId`; selecting a row
+  only updates the chat view.

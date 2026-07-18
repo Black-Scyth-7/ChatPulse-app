@@ -5,6 +5,11 @@ Specs and documentation for ChatPulse — a real-time team chat app.
 ## Contents
 
 - `design/tokens.md` — design system tokens (color, spacing, typography, radius, shadow, motion).
+- `design/components.md` — component specs (conversation list item, message bubbles, chat header, input bar, avatar, read receipts, …).
+- `design/layout.md` — two-panel app shell (conversation list + chat view) and responsive behavior.
+- `design/references.md` — WhatsApp dark-mode visual references for each component.
+
+The design system is **WhatsApp-inspired dark mode**.
 
 ## Stack
 
