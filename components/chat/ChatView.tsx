@@ -9,6 +9,7 @@ import { usePresence } from "@/lib/usePresence";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useChannels } from "@/components/sidebar/ChannelsProvider";
 import { ChannelHeader } from "./ChannelHeader";
+import { InviteModal } from "./InviteModal";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
@@ -31,6 +32,7 @@ export function ChatView({
   const [leaveError, setLeaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const router = useRouter();
   const { channels, removeChannel } = useChannels();
   const { emit } = useSocket();
@@ -200,6 +202,16 @@ export function ChatView({
         leaving={leaving}
         onDelete={channel && myRole === "OWNER" ? handleDelete : undefined}
         deleting={deleting}
+        onInvite={
+          channel && (myRole === "OWNER" || myRole === "ADMIN")
+            ? () => setInviteOpen(true)
+            : undefined
+        }
+      />
+      <InviteModal
+        channelId={channelId}
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
       />
       {(leaveError || deleteError) && (
         <p

@@ -217,6 +217,10 @@ async function main() {
     }
     sockets.add(socket.id);
 
+    // Join the user's personal room so events can target them directly even
+    // when they aren't in the relevant channel room yet (e.g. channel invites).
+    socket.join(`user:${userId}`);
+
     // Auto-join every channel room the user is a member of.
     const rooms = await channelRoomsForUser(userId);
     for (const r of rooms) socket.join(r);

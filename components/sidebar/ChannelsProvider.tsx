@@ -174,6 +174,23 @@ export function ChannelsProvider({
     };
   }, [on, off, currentUserId]);
 
+  // The user was invited to a channel: add it to the sidebar in real time (no
+  // refresh) and seed its unread count so the badge tracks correctly.
+  useEffect(() => {
+    const onInvited = ({ channel }: { channel: ChannelSummary }) => {
+      addChannel(channel);
+      setUnread((prev) =>
+        channel.id in prev
+          ? prev
+          : { ...prev, [channel.id]: channel.unreadCount ?? 0 },
+      );
+    };
+    on("channel:invited", onInvited);
+    return () => {
+      off("channel:invited", onInvited);
+    };
+  }, [on, off, addChannel]);
+
   // A channel was deleted by its owner: drop it from every member's sidebar and,
   // if it's the one they're viewing, navigate them to another channel (or home).
   useEffect(() => {

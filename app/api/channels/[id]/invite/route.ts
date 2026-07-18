@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { jsonError, requireSession } from "@/lib/api";
 import { inviteSchema } from "@/lib/validators/invite";
+import { broadcastChannelInvited } from "@/lib/presence";
+import type { ChannelSummary } from "@/lib/types";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -68,6 +70,25 @@ export async function POST(
   const member = await prisma.channelMember.create({
     data: { channelId: id, userId, role: "MEMBER" },
   });
+
+  // Push the new channel into the invited user's sidebar in real time. Shaped
+  // from their point of view: MEMBER role, no unread yet.
+  const memberCount = await prisma.channelMember.count({
+    where: { channelId: id },
+  });
+  const summary: ChannelSummary = {
+    id: channel.id,
+    name: channel.name,
+    description: channel.description,
+    isPrivate: channel.isPrivate,
+    createdById: channel.createdById,
+    createdAt: channel.createdAt.toISOString(),
+    updatedAt: channel.updatedAt.toISOString(),
+    memberCount,
+    role: "MEMBER",
+    unreadCount: 0,
+  };
+  broadcastChannelInvited(userId, summary);
 
   return NextResponse.json(
     {

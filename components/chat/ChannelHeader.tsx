@@ -21,12 +21,18 @@ export function ChannelHeader({
   leaving = false,
   onDelete,
   deleting = false,
+  onInvite,
 }: {
   name: string;
   description: string | null;
   memberCount: number;
   /** Members currently online or away; appended as "Y online" when provided. */
   onlineCount?: number;
+  /**
+   * Owner/admin-only invite handler; when omitted, no Invite button is shown.
+   * Opens the invite modal for adding members.
+   */
+  onInvite?: () => void;
   /** Leave handler; when omitted, no leave item is shown. */
   onLeave?: () => void;
   /** False for owners, who can't leave their own channel. */
@@ -75,6 +81,19 @@ export function ChannelHeader({
         {memberCount} {memberCount === 1 ? "member" : "members"}
         {onlineCount !== undefined && `, ${onlineCount} online`}
       </span>
+
+      {onInvite && (
+        <button
+          type="button"
+          onClick={onInvite}
+          className="flex h-7 shrink-0 items-center gap-1 rounded border border-border bg-surface-raised px-2.5 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-overlay focus:outline-none focus-visible:shadow-focus"
+        >
+          <span aria-hidden="true" className="text-base leading-none">
+            +
+          </span>
+          Invite
+        </button>
+      )}
 
       {(onLeave || onDelete) && (
         <div ref={ref} className="relative shrink-0">
