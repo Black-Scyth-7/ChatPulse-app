@@ -14,6 +14,13 @@ export interface UserSummary {
 
 export type ChannelRole = "OWNER" | "ADMIN" | "MEMBER";
 
+/**
+ * Delivery status behind the WhatsApp-style read-receipt check marks. Mirrors
+ * the Prisma `MessageStatus` enum: SENT (single check) → DELIVERED (double
+ * check) → READ (blue double check).
+ */
+export type MessageStatus = "SENT" | "DELIVERED" | "READ";
+
 export interface Channel {
   id: ID;
   name: string;
@@ -62,6 +69,7 @@ export interface MessageWithAuthor {
   body: string;
   editedAt: string | null;
   createdAt: string;
+  status: MessageStatus;
   author: UserSummary;
 }
 
@@ -79,6 +87,7 @@ export interface DirectMessageWithAuthor {
   body: string;
   editedAt: string | null;
   createdAt: string;
+  status: MessageStatus;
   author: UserSummary;
 }
 

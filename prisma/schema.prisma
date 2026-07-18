@@ -30,6 +30,14 @@ enum ChannelMemberRole {
   MEMBER
 }
 
+/// Delivery/read state for a message. Backs the WhatsApp-style check marks:
+/// SENT (single check) → DELIVERED (double check) → READ (blue double check).
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
 // ---------------------------------------------------------------------------
 // Users & NextAuth (Prisma adapter spec)
 // ---------------------------------------------------------------------------
@@ -53,6 +61,7 @@ model User {
   messages           Message[]
   dmParticipations   DirectConversationParticipant[]
   directMessages     DirectMessage[]
+  readReceipts       MessageReadReceipt[]
 
   @@index([status])
 }
@@ -145,19 +154,22 @@ model ChannelMember {
 /// A single channel message. Soft-delete (deletedAt) / edit (editedAt) back the
 /// message_deleted / message_edited realtime events.
 model Message {
-  id        String    @id @default(cuid())
+  id        String        @id @default(cuid())
   // Markdown body (rendered client-side with react-markdown + remark-gfm).
-  body      String    @db.Text
+  body      String        @db.Text
   authorId  String
   channelId String
   editedAt  DateTime?
   // Soft delete: non-null once the message is deleted; rows are never hard-deleted.
   deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  // Delivery/read state; backfills to SENT on existing rows via the default.
+  status    MessageStatus @default(SENT)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  author  User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author       User                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel      Channel              @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  readReceipts MessageReadReceipt[]
 
   // Hot path: paginating a channel's history newest-first.
   @@index([channelId, createdAt])
@@ -197,15 +209,18 @@ model DirectConversationParticipant {
 /// A single direct message within a DirectConversation. Soft-delete (deletedAt)
 /// / edit (editedAt) mirror the channel Message behavior.
 model DirectMessage {
-  id             String    @id @default(cuid())
-  body           String    @db.Text
+  id             String        @id @default(cuid())
+  body           String        @db.Text
   authorId       String
   conversationId String
   editedAt       DateTime?
   // Soft delete: non-null once the message is deleted; rows are never hard-deleted.
   deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  // DMs carry the receipt in the status field — a conversation has a single other
+  // participant — so no per-message receipt rows for DMs. Backfills to SENT.
+  status         MessageStatus @default(SENT)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
   conversation DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -213,4 +228,24 @@ model DirectMessage {
   // Hot path: paginating a DM conversation's history.
   @@index([conversationId, createdAt])
   @@index([authorId])
+}
+
+// ---------------------------------------------------------------------------
+// Read receipts (channel messages)
+// ---------------------------------------------------------------------------
+
+/// One row per (channel message, reader). Records who has read a given channel
+/// message and when. DMs use DirectMessage.status instead of receipt rows.
+model MessageReadReceipt {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@index([messageId])
 }

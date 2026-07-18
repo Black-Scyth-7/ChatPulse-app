@@ -4,8 +4,34 @@ import { useEffect, useRef, useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/useChatMessages";
+import type { MessageStatus } from "@/lib/types";
 import { Avatar } from "./Avatar";
 import { Markdown } from "./Markdown";
+
+/**
+ * WhatsApp-style read-receipt indicator for the author's own messages:
+ * SENT → single check, DELIVERED → double check, READ → blue double check.
+ */
+function ReadReceipt({ status }: { status: MessageStatus }) {
+  const label =
+    status === "READ"
+      ? "Read"
+      : status === "DELIVERED"
+        ? "Delivered"
+        : "Sent";
+  return (
+    <span
+      className={cn(
+        "inline-flex select-none align-baseline text-xs leading-none",
+        status === "READ" ? "text-accent" : "text-text-muted",
+      )}
+      title={label}
+      aria-label={label}
+    >
+      {status === "SENT" ? "✓" : "✓✓"}
+    </span>
+  );
+}
 
 /** Full timestamp for the title attribute / hover, e.g. "Jul 16, 2026 3:04 PM". */
 function fullTimestamp(iso: string): string {
@@ -137,11 +163,11 @@ export function MessageItem({
 }) {
   const [editing, setEditing] = useState(false);
   const authorName = message.author.name ?? message.author.email ?? "Unknown";
-  const failed = message.status === "failed";
-  const sending = message.status === "sending";
+  const failed = message.sendState === "failed";
+  const sending = message.sendState === "sending";
   // Own messages can be acted on, but not while still an optimistic placeholder.
   const canAct =
-    canModify && isOwn && !editing && message.status !== "sending" && !failed;
+    canModify && isOwn && !editing && message.sendState !== "sending" && !failed;
 
   return (
     <div
@@ -194,6 +220,12 @@ export function MessageItem({
             {!showHeader && message.editedAt && (
               <span className="ml-1 align-baseline text-xs text-text-muted">
                 (edited)
+              </span>
+            )}
+            {/* Read receipts show only on the author's own, confirmed sends. */}
+            {isOwn && !sending && !failed && (
+              <span className="ml-1 align-baseline">
+                <ReadReceipt status={message.status} />
               </span>
             )}
           </div>

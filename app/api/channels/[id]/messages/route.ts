@@ -71,6 +71,7 @@ export async function GET(
       body: m.body,
       editedAt: m.editedAt ? m.editedAt.toISOString() : null,
       createdAt: m.createdAt.toISOString(),
+      status: m.status,
       author: {
         id: m.author.id,
         name: m.author.name,

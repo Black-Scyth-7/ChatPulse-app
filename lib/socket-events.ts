@@ -11,7 +11,11 @@
  * them to a channel they aren't in yet).
  */
 
-import type { ChannelSummary } from "./types";
+import type { ChannelSummary, MessageStatus } from "./types";
+
+// Re-exported so the realtime server can import the delivery-status union
+// alongside the wire event contracts from a single module.
+export type { MessageStatus };
 
 /** Presence values as broadcast over the wire (lowercase; DB uses UserStatus). */
 export type PresenceStatus = "online" | "offline" | "away";
@@ -25,6 +29,8 @@ export interface SerializedMessage {
   createdAt: string;
   /** Non-null once the message has been edited. */
   editedAt: string | null;
+  /** Delivery status for the author's read-receipt check marks. */
+  status: MessageStatus;
 }
 
 /** A direct message shaped for realtime delivery. */
@@ -36,6 +42,8 @@ export interface SerializedDirectMessage {
   createdAt: string;
   /** Non-null once the message has been edited. */
   editedAt: string | null;
+  /** Delivery status for the author's read-receipt check marks. */
+  status: MessageStatus;
 }
 
 /** Standard ack envelope returned to the emitter via a callback. */
@@ -101,6 +109,37 @@ export interface ServerToClientEvents {
     isTyping: boolean;
   }) => void;
   "dm:new": (data: SerializedDirectMessage) => void;
+  /**
+   * A recipient's client connected to a channel room, so every message in that
+   * channel authored by someone else is now (at least) DELIVERED. Authors update
+   * their check marks for their own messages up to `deliveredUpTo`.
+   */
+  "message:delivered": (data: {
+    channelId: string;
+    userId: string;
+    deliveredUpTo: string;
+  }) => void;
+  /**
+   * A recipient opened a channel, marking every earlier message authored by
+   * someone else READ. Authors flip their own messages up to `readUpTo` to READ.
+   */
+  "message:read": (data: {
+    channelId: string;
+    userId: string;
+    readUpTo: string;
+  }) => void;
+  /** DM equivalent of `message:delivered`. */
+  "dm:delivered": (data: {
+    conversationId: string;
+    userId: string;
+    deliveredUpTo: string;
+  }) => void;
+  /** DM equivalent of `message:read`. */
+  "dm:read": (data: {
+    conversationId: string;
+    userId: string;
+    readUpTo: string;
+  }) => void;
 }
 
 /** Per-socket state populated by the auth middleware. */
