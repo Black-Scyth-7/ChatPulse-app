@@ -1,45 +1,14 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import type { PresenceStatus } from "@/lib/socket-events";
 import type { UserSummary } from "@/lib/types";
 import { useDirectMessages } from "@/lib/useDirectMessages";
-import { PRESENCE_DOT, PRESENCE_LABEL, usePresence } from "@/lib/usePresence";
+import { usePresence } from "@/lib/usePresence";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useDMConversations } from "@/components/sidebar/DMConversationsProvider";
-import { Avatar } from "./Avatar";
-import { BackToListButton } from "./BackToListButton";
+import { ChatHeader } from "./ChatHeader";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
-
-function DirectMessageHeader({
-  other,
-  status,
-}: {
-  other: UserSummary | null;
-  status: PresenceStatus;
-}) {
-  const name = other?.name ?? other?.email ?? "Direct message";
-  return (
-    <header className="flex h-topbar shrink-0 items-center gap-3 border-b border-border px-4">
-      <BackToListButton />
-      {other ? (
-        <Avatar user={other} className="h-avatar w-avatar" status={status} />
-      ) : null}
-      <div className="min-w-0">
-        <h1 className="truncate text-md font-semibold text-text">{name}</h1>
-        <p className="flex items-center gap-1.5 text-xs text-text-muted">
-          <span
-            aria-hidden="true"
-            className={cn("h-2 w-2 rounded-full", PRESENCE_DOT[status])}
-          />
-          {PRESENCE_LABEL[status]}
-        </p>
-      </div>
-    </header>
-  );
-}
 
 /**
  * The full direct-message view: header (other participant + live presence) +
@@ -99,7 +68,7 @@ export function DirectMessageView({
 
   return (
     <div className="flex h-full flex-col">
-      <DirectMessageHeader other={other} status={presence} />
+      <ChatHeader variant="dm" user={other} status={presence} />
       <MessageList
         messages={messages}
         loading={loading}
