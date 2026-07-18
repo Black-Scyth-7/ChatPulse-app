@@ -9,6 +9,7 @@ import { PRESENCE_DOT, PRESENCE_LABEL, usePresence } from "@/lib/usePresence";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useDMConversations } from "@/components/sidebar/DMConversationsProvider";
 import { Avatar } from "./Avatar";
+import { BackToListButton } from "./BackToListButton";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 
@@ -22,6 +23,7 @@ function DirectMessageHeader({
   const name = other?.name ?? other?.email ?? "Direct message";
   return (
     <header className="flex h-topbar shrink-0 items-center gap-3 border-b border-border px-4">
+      <BackToListButton />
       {other ? (
         <Avatar user={other} className="h-avatar w-avatar" status={status} />
       ) : null}

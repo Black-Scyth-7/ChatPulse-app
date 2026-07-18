@@ -45,6 +45,23 @@ export function DMListSkeleton() {
   );
 }
 
+/** Placeholder rows for the unified conversation list (48px avatar + two lines). */
+export function ConversationListSkeleton() {
+  return (
+    <ul aria-hidden="true">
+      {Array.from({ length: 7 }).map((_, i) => (
+        <li key={i} className="flex items-center gap-3 px-3 py-2.5">
+          <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className={cn("h-3.5", ROW_WIDTHS[i % ROW_WIDTHS.length])} />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** Placeholder message groups for the main message list. */
 export function MessageListSkeleton() {
   return (

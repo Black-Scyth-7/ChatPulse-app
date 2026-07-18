@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BackToListButton } from "./BackToListButton";
 
 /**
  * Channel header bar: name, optional description, and member count. Sits at the
@@ -61,6 +62,7 @@ export function ChannelHeader({
 
   return (
     <header className="flex h-topbar shrink-0 items-center gap-3 border-b border-border px-4">
+      <BackToListButton />
       <h1 className="flex min-w-0 items-center gap-1 text-md font-semibold text-text">
         <span aria-hidden="true" className="text-text-muted">
           #
