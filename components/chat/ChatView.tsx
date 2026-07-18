@@ -228,6 +228,7 @@ export function ChatView({
         hasMore={hasMore}
         error={error}
         currentUserId={currentUser.id}
+        isGroup
         onEdit={editMessage}
         onDelete={deleteMessage}
         loadOlder={loadOlder}
