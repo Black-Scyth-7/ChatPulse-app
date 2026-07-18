@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * ChatPulse design system — Tailwind theme extension.
+ * ChatPulse design system — Tailwind theme extension (WhatsApp-inspired dark).
  *
  * Every value here mirrors /docs/design/tokens.md. This file is the machine
  * source of truth; the markdown is the human source of truth. Keep them in sync.
@@ -19,108 +19,126 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Background & surface
-        bg: "#0B0D10",
+        // Backgrounds & surfaces (WhatsApp dark)
+        bg: "#0B141A", // chat/canvas background (wallpaper base)
+        header: "#1F2C34", // top bars, input bar
+        panel: "#111B21", // conversation list / sidebar panel
         surface: {
-          DEFAULT: "#15181D",
-          raised: "#1C2027",
-          overlay: "#242932",
-          inset: "#0F1216",
+          DEFAULT: "#1F2C34", // raised surface, incoming bubble, input field
+          raised: "#233138", // hovered rows, secondary surfaces
+          overlay: "#233138", // modals, popovers, dropdowns
+          inset: "#0B141A", // wells, pressed states
         },
-        // Borders
+        // Message bubbles
+        bubble: {
+          out: "#005C4B", // outgoing (teal green)
+          in: "#1F2C34", // incoming (dark gray)
+        },
+        // Borders & dividers
         border: {
-          DEFAULT: "#262B33",
-          strong: "#333A44",
-          subtle: "#1B1F25",
+          DEFAULT: "#2A3942",
+          strong: "#374248",
+          subtle: "#1D282F",
         },
         // Text
         text: {
-          DEFAULT: "#E6E8EB",
-          secondary: "#9BA1A9",
-          muted: "#6B7178",
-          inverse: "#0B0D10",
+          DEFAULT: "#E9EDEF", // primary
+          secondary: "#8696A0", // timestamps, previews, meta
+          muted: "#667781", // placeholder, disabled
+          inverse: "#0B141A", // text on accent fills
         },
-        // Accent (brand)
+        // Accent (WhatsApp green)
         accent: {
-          DEFAULT: "#5B8CFF",
-          hover: "#4A7BF0",
-          active: "#3A69E0",
-          muted: "#1E2A47",
-          fg: "#FFFFFF",
+          DEFAULT: "#00A884",
+          hover: "#02BC96",
+          active: "#008F72",
+          muted: "#103129", // green tint: active row, mention bg
+          fg: "#0B141A", // text/icon on an accent fill
         },
         // Status
-        success: { DEFAULT: "#3FB950", muted: "#122117" },
-        warning: { DEFAULT: "#D29922", muted: "#241C0E" },
-        danger: { DEFAULT: "#F85149", muted: "#2B1517" },
-        info: { DEFAULT: "#58A6FF", muted: "#0F2033" },
-        offline: "#6B7178",
+        success: { DEFAULT: "#00A884", muted: "#103129" }, // online, sent
+        warning: { DEFAULT: "#E6B14C", muted: "#2A2415" },
+        danger: { DEFAULT: "#F15C6D", muted: "#2B1619" },
+        info: { DEFAULT: "#53BDEB", muted: "#0F2A33" }, // link blue / read ticks
+        offline: "#667781",
+        // Read receipts (double-tick)
+        tick: {
+          DEFAULT: "#8696A0", // sent / delivered (gray)
+          read: "#53BDEB", // read (blue)
+        },
+        // Unread badge
+        unread: "#00A884",
       },
       spacing: {
-        "sidebar": "260px",
-        "sidebar-rail": "72px",
-        "topbar": "56px",
-        "composer": "44px",
-        "avatar-sm": "24px",
-        "avatar": "36px",
-        "avatar-lg": "48px",
+        list: "30%", // conversation list panel width (desktop)
+        chat: "70%", // chat view width (desktop)
+        topbar: "60px", // per-panel top bar height
+        composer: "42px", // input bar min height
+        "avatar-sm": "34px", // inline / list-row small
+        avatar: "40px", // list row avatar
+        "avatar-lg": "49px", // chat header avatar
       },
       width: {
-        "sidebar": "260px",
-        "sidebar-rail": "72px",
-        "avatar-sm": "24px",
-        "avatar": "36px",
-        "avatar-lg": "48px",
+        list: "30%",
+        chat: "70%",
+        "avatar-sm": "34px",
+        avatar: "40px",
+        "avatar-lg": "49px",
       },
       height: {
-        "topbar": "56px",
-        "avatar-sm": "24px",
-        "avatar": "36px",
-        "avatar-lg": "48px",
+        topbar: "60px",
+        "avatar-sm": "34px",
+        avatar: "40px",
+        "avatar-lg": "49px",
       },
       minHeight: {
-        "composer": "44px",
-        "topbar": "56px",
+        composer: "42px",
+        topbar: "60px",
+      },
+      maxWidth: {
+        bubble: "65%", // message bubble max width
       },
       fontFamily: {
+        // System font stack — matches WhatsApp Web
         sans: [
-          "Inter",
-          "ui-sans-serif",
+          "Segoe UI",
           "system-ui",
           "-apple-system",
-          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Helvetica",
+          "Arial",
           "sans-serif",
         ],
         mono: [
-          "JetBrains Mono",
           "ui-monospace",
           "SFMono-Regular",
           "Menlo",
+          "Consolas",
           "monospace",
         ],
       },
       fontSize: {
-        xs: ["12px", { lineHeight: "16px" }],
-        sm: ["13px", { lineHeight: "20px" }],
-        base: ["15px", { lineHeight: "22px" }],
-        md: ["16px", { lineHeight: "24px" }],
-        lg: ["18px", { lineHeight: "26px" }],
-        xl: ["22px", { lineHeight: "30px" }],
-        "2xl": ["28px", { lineHeight: "36px" }],
+        tick: ["11px", { lineHeight: "15px" }], // timestamps, ticks
+        preview: ["14px", { lineHeight: "20px" }], // chat preview line
+        message: ["14.2px", { lineHeight: "1.5" }], // message body
+        name: ["16px", { lineHeight: "21px" }], // contact / channel name
+        title: ["19px", { lineHeight: "25px" }], // headings, modal titles
       },
       borderRadius: {
         sm: "4px",
         DEFAULT: "6px",
         md: "8px",
+        bubble: "7.5px", // WhatsApp bubble radius
         lg: "12px",
-        xl: "16px",
         full: "9999px",
       },
       boxShadow: {
-        sm: "0 1px 2px rgba(0,0,0,.4)",
-        DEFAULT: "0 2px 8px rgba(0,0,0,.45)",
-        md: "0 6px 20px rgba(0,0,0,.5)",
-        lg: "0 16px 48px rgba(0,0,0,.6)",
-        focus: "0 0 0 2px #0B0D10, 0 0 0 4px #5B8CFF",
+        sm: "0 1px 0.5px rgba(11,20,26,.13)", // bubble lift
+        DEFAULT: "0 2px 5px rgba(11,20,26,.26)", // dropdowns
+        md: "0 6px 18px rgba(11,20,26,.4)", // popovers
+        lg: "0 17px 50px rgba(11,20,26,.55)", // modals
+        focus: "0 0 0 2px #0B141A, 0 0 0 4px #00A884",
       },
       transitionDuration: {
         fast: "150ms",
