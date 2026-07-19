@@ -2,6 +2,7 @@
   "name": "chatpulse",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/dist/main.js",
   "scripts": {
     "dev": "tsx server/index.ts",
     "dev:next": "next dev",
@@ -9,6 +10,10 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "electron:compile": "tsc -p electron/tsconfig.json",
+    "electron:start": "electron .",
+    "electron:dev": "concurrently -k -n next,electron -c blue,magenta \"pnpm dev\" \"wait-on http://localhost:3000 && pnpm electron:compile && pnpm electron:start\"",
+    "electron:build": "next build && pnpm electron:compile && electron-builder --win",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
@@ -17,6 +22,30 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "build": {
+    "appId": "com.chatpulse.desktop",
+    "productName": "ChatPulse",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/dist/**/*",
+      ".next/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "public/icon.png", "to": "icon.png" }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.4",
@@ -37,12 +66,16 @@
     "@types/react": "^19.0.4",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^10.0.3",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.4",
     "postcss": "^8.4.49",
     "prisma": "^6.2.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.23.1",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "wait-on": "^9.0.10"
   }
 }

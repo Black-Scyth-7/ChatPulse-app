@@ -11,6 +11,10 @@
 # production
 /build
 
+# electron
+/electron/dist/
+/dist-electron/
+
 # misc
 .DS_Store
 *.pem
