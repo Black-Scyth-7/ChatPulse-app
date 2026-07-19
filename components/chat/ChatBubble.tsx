@@ -226,6 +226,7 @@ export function ChatBubble({
   canModify = true,
   onEdit,
   onDelete,
+  onRetry,
 }: {
   message: ChatMessage;
   isOwn: boolean;
@@ -237,6 +238,8 @@ export function ChatBubble({
   canModify?: boolean;
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string) => void;
+  /** Re-send a failed optimistic message, keyed by its clientId. */
+  onRetry?: (clientId: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -363,9 +366,15 @@ export function ChatBubble({
               )}
             </div>
             {failed && (
-              <p className="mt-0.5 text-tick text-danger">
+              <button
+                type="button"
+                onClick={() => {
+                  if (message.clientId) onRetry?.(message.clientId);
+                }}
+                className="mt-0.5 block text-left text-tick text-danger underline decoration-dotted underline-offset-2 transition-opacity duration-fast hover:opacity-80 focus:outline-none focus-visible:shadow-focus"
+              >
                 Failed to send. Tap to retry.
-              </p>
+              </button>
             )}
           </>
         )}

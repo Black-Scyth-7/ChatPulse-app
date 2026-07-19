@@ -28,6 +28,8 @@ export interface UseDirectMessages {
   loadOlder: () => void;
   /** Optimistically send a direct message over the socket. */
   sendMessage: (body: string) => void;
+  /** Re-send a failed optimistic message, keyed by its clientId. */
+  retryMessage: (clientId: string) => void;
 }
 
 const PAGE_SIZE = 50;
@@ -84,6 +86,10 @@ export function useDirectMessages(
   const { emit, on, off, connected } = useSocket();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Mirror of `messages` for reading the latest state inside stable callbacks
+  // (e.g. retry) without adding `messages` to their dependency lists.
+  const messagesRef = useRef<ChatMessage[]>([]);
+  messagesRef.current = messages;
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,27 +195,11 @@ export function useDirectMessages(
   }, [conversationId, loadingMore]);
 
   // --- Optimistic send -----------------------------------------------------
-  const sendMessage = useCallback(
-    (raw: string) => {
-      const body = raw.trim();
-      if (!body) return;
-      const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const optimistic: ChatMessage = {
-        id: clientId,
-        clientId,
-        channelId: conversationId,
-        authorId: currentUser.id,
-        body,
-        editedAt: null,
-        createdAt: new Date().toISOString(),
-        author: currentUser,
-        // Server delivery state defaults to SENT; sendState drives the
-        // optimistic pending/failed UI until the ack lands.
-        status: "SENT",
-        sendState: "sending",
-      };
-      setMessages((prev) => [...prev, optimistic]);
-
+  // Emit the socket send for a placeholder identified by clientId and reconcile
+  // the ack: adopt the server message on success, flip to "failed" otherwise.
+  // Shared by the initial send and retry so both reconcile identically.
+  const dispatchSend = useCallback(
+    (clientId: string, body: string) => {
       emit(
         "dm:send",
         { conversationId, content: body },
@@ -237,7 +227,49 @@ export function useDirectMessages(
         },
       );
     },
-    [conversationId, currentUser, emit],
+    [conversationId, emit],
+  );
+
+  const sendMessage = useCallback(
+    (raw: string) => {
+      const body = raw.trim();
+      if (!body) return;
+      const clientId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimistic: ChatMessage = {
+        id: clientId,
+        clientId,
+        channelId: conversationId,
+        authorId: currentUser.id,
+        body,
+        editedAt: null,
+        createdAt: new Date().toISOString(),
+        author: currentUser,
+        // Server delivery state defaults to SENT; sendState drives the
+        // optimistic pending/failed UI until the ack lands.
+        status: "SENT",
+        sendState: "sending",
+      };
+      setMessages((prev) => [...prev, optimistic]);
+      dispatchSend(clientId, body);
+    },
+    [conversationId, currentUser, dispatchSend],
+  );
+
+  const retryMessage = useCallback(
+    (clientId: string) => {
+      // Flip the failed placeholder back to "sending" and re-emit its body.
+      const target = messagesRef.current.find(
+        (m) => m.clientId === clientId && m.sendState === "failed",
+      );
+      if (!target) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.clientId === clientId ? { ...m, sendState: "sending" } : m,
+        ),
+      );
+      dispatchSend(clientId, target.body);
+    },
+    [dispatchSend],
   );
 
   return {
@@ -250,5 +282,6 @@ export function useDirectMessages(
     reload,
     loadOlder,
     sendMessage,
+    retryMessage,
   };
 }

@@ -78,6 +78,7 @@ export function MessageList({
   onDelete,
   loadOlder,
   onRetry,
+  onRetryMessage,
 }: {
   messages: ChatMessage[];
   loading: boolean;
@@ -94,6 +95,8 @@ export function MessageList({
   loadOlder: () => void;
   /** Retry the initial history load; enables the error-state retry button. */
   onRetry?: () => void;
+  /** Re-send a failed optimistic message, keyed by its clientId. */
+  onRetryMessage?: (clientId: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -232,6 +235,7 @@ export function MessageList({
                 canModify={canModify}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onRetry={onRetryMessage}
               />
             </div>
           );
