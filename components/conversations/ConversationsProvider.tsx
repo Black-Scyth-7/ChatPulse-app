@@ -8,13 +8,20 @@ import {
   useRef,
   useState,
 } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ChannelSummary, ConversationListItem } from "@/lib/types";
 import type {
   SerializedDirectMessage,
   SerializedMessage,
 } from "@/lib/socket-events";
 import { useSocket } from "@/lib/useSocket";
+import { getDesktop } from "@/lib/desktop";
+import {
+  playNotificationSound,
+  shouldNotify,
+  showNotification,
+} from "@/lib/notifications";
+import { useNotificationSettings } from "@/lib/useNotificationSettings";
 
 /**
  * Client-side store for the unified WhatsApp-style conversation list — channels
@@ -67,9 +74,19 @@ export function ConversationsProvider({
   children: React.ReactNode;
 }) {
   const { on, off } = useSocket();
+  const router = useRouter();
+  const { mode } = useNotificationSettings();
+  // Read the current notification mode inside socket handlers without making
+  // them (and their socket subscriptions) depend on it.
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const [conversations, setConversations] = useState<ConversationListItem[]>(
     [],
   );
+  // Mirror of `conversations` for synchronous reads inside socket handlers,
+  // since a `setConversations` updater doesn't run at the call site.
+  const conversationsRef = useRef<ConversationListItem[]>([]);
+  conversationsRef.current = conversations;
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [reloadNonce, setReloadNonce] = useState(0);
   const reload = useCallback(() => {
@@ -109,13 +126,26 @@ export function ConversationsProvider({
     (
       type: "channel" | "dm",
       convId: string,
-      author: { id: string; name: string | null },
+      author: { id: string; name: string | null; image: string | null },
       body: string,
       createdAt: string,
     ) => {
       const isOwn = author.id === currentUserId;
       const isActive =
         activeRef.current?.type === type && activeRef.current.id === convId;
+      // The conversation the user is actively looking at: open *and* the window
+      // focused. Anything else is "non-focused" and eligible for a notification.
+      const conversationFocused =
+        isActive &&
+        typeof document !== "undefined" &&
+        document.hasFocus();
+
+      // Decide notification eligibility from the current snapshot (read via ref
+      // so it doesn't depend on the async setConversations updater below).
+      const known = conversationsRef.current.find(
+        (c) => c.type === type && c.id === convId,
+      );
+
       setConversations((prev) => {
         const existing = prev.find(
           (c) => c.type === type && c.id === convId,
@@ -139,8 +169,31 @@ export function ConversationsProvider({
           ...prev.filter((c) => !(c.type === type && c.id === convId)),
         ];
       });
+
+      // Notify for messages from others in a conversation the user isn't
+      // actively watching, subject to the mute/DM-only preference.
+      if (
+        known &&
+        !isOwn &&
+        !conversationFocused &&
+        shouldNotify(modeRef.current, type)
+      ) {
+        const senderName = author.name ?? "Someone";
+        const title =
+          type === "dm" ? senderName : `#${known.name} — ${senderName}`;
+        const navigatePath =
+          type === "dm" ? `/dm/${convId}` : `/channel/${convId}`;
+        showNotification({
+          title,
+          body: truncate(body),
+          icon: author.image ?? undefined,
+          navigatePath,
+          onActivate: (path) => router.push(path),
+        });
+        playNotificationSound();
+      }
     },
-    [currentUserId],
+    [currentUserId, router],
   );
 
   useEffect(() => {
@@ -161,6 +214,17 @@ export function ConversationsProvider({
       off("dm:new", onDm);
     };
   }, [on, off, applyMessage]);
+
+  // Clicking a native (Electron) notification navigates to its conversation.
+  // The main process focuses the window and forwards the route here.
+  useEffect(() => {
+    const desktop = getDesktop();
+    if (!desktop) return;
+    const unsubscribe = desktop.onActivate((navigatePath) => {
+      router.push(navigatePath);
+    });
+    return unsubscribe;
+  }, [router]);
 
   // A channel the user was just added to: prepend it (no refetch needed).
   useEffect(() => {
