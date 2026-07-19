@@ -48,6 +48,7 @@ export function ChatView({
     sendMessage,
     editMessage,
     deleteMessage,
+    retryMessage,
   } = useChatMessages(channelId, currentUser);
 
   // Page title: "ChatPulse — #general" once the channel name resolves.
@@ -259,6 +260,7 @@ export function ChatView({
         onDelete={deleteMessage}
         loadOlder={loadOlder}
         onRetry={reload}
+        onRetryMessage={retryMessage}
       />
       <TypingIndicator
         channelId={channelId}

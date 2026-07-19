@@ -43,6 +43,7 @@ export function DirectMessageView({
     reload,
     loadOlder,
     sendMessage,
+    retryMessage,
   } = useDirectMessages(conversationId, currentUser);
 
   const noop = useCallback(() => {}, []);
@@ -96,6 +97,7 @@ export function DirectMessageView({
         onDelete={noop}
         loadOlder={loadOlder}
         onRetry={reload}
+        onRetryMessage={retryMessage}
       />
       <ChatInput
         placeholder={`Message ${composerName}`}
