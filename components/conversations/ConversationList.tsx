@@ -135,7 +135,7 @@ function UserAvatarMenu({ user }: { user: ConversationListUser }) {
   );
 }
 
-/** Overflow (three-dots) menu: New direct message, New group, Settings, Sign out. */
+/** Overflow (three-dots) menu: New direct message, New group, Sign out. */
 function OverflowMenu({
   onNewDm,
   onNewGroup,
@@ -181,9 +181,6 @@ function OverflowMenu({
           </button>
           <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); onNewGroup(); }}>
             New group
-          </button>
-          <button type="button" role="menuitem" disabled className={cn(item, "cursor-default text-text-muted hover:bg-transparent")}>
-            Settings
           </button>
           <div className="my-1 h-px bg-border" role="separator" />
           <button

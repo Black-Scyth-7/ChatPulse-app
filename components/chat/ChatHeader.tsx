@@ -16,11 +16,10 @@ import { BackToListButton } from "./BackToListButton";
  *  - `channel`: a group icon, channel name, and a truncated member-name preview
  *    ("You, Alice, Bob, +4").
  *
- * The right side carries placeholder video/voice call icons and a ⋯ menu. The
- * channel menu exposes Channel info · Invite · Mute · Leave/Delete; the DM menu
- * exposes Contact info · Mute. Real actions (Invite/Leave/Delete) are wired
- * through props and gated by the caller on role; Mute is a local placeholder,
- * and the call icons and info action are non-functional placeholders for now.
+ * The right side carries a ⋯ menu. The channel menu exposes Channel info ·
+ * Invite · Leave/Delete; the DM menu exposes Contact info. Real actions
+ * (Invite/Leave/Delete) are wired through props and gated by the caller on role;
+ * the info action opens a panel when `onOpenInfo` is provided.
  */
 
 type ChatHeaderProps =
@@ -68,43 +67,6 @@ function memberPreview(names: string[]): string {
   return `${names.slice(0, MAX).join(", ")}, +${names.length - MAX}`;
 }
 
-function VideoIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
-      <rect
-        x="2.5"
-        y="6.5"
-        width="12"
-        height="11"
-        rx="2.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-      />
-      <path
-        d="M14.5 10.5 21 7v10l-6.5-3.5"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
-      <path
-        d="M5 3.5h3l1.6 4-2 1.4a11 11 0 0 0 4.9 4.9l1.4-2 4 1.6v3a1.7 1.7 0 0 1-1.85 1.7A15.5 15.5 0 0 1 3.3 5.35 1.7 1.7 0 0 1 5 3.5Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function GroupIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" aria-hidden="true">
@@ -135,23 +97,8 @@ function MoreIcon() {
   );
 }
 
-/** Placeholder call icon button — visible but non-functional for now. */
-function CallButton({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary transition-colors duration-fast hover:bg-surface-raised hover:text-text focus:outline-none focus-visible:shadow-focus"
-    >
-      {children}
-    </button>
-  );
-}
-
 export function ChatHeader(props: ChatHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [muted, setMuted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close the menu on outside click or Escape.
@@ -233,13 +180,6 @@ export function ChatHeader(props: ChatHeaderProps) {
       )}
 
       <div className="flex shrink-0 items-center gap-1">
-        <CallButton label="Video call">
-          <VideoIcon />
-        </CallButton>
-        <CallButton label="Voice call">
-          <PhoneIcon />
-        </CallButton>
-
         <div ref={menuRef} className="relative">
           <button
             type="button"
@@ -276,15 +216,6 @@ export function ChatHeader(props: ChatHeaderProps) {
                   Invite
                 </MenuItem>
               )}
-
-              <MenuItem
-                onClick={() => {
-                  setMenuOpen(false);
-                  setMuted((v) => !v);
-                }}
-              >
-                {muted ? "Unmute" : "Mute"}
-              </MenuItem>
 
               {!isDm && props.onLeave && props.canLeave && (
                 <MenuItem
