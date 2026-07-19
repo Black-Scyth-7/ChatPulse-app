@@ -2,6 +2,8 @@
   "name": "chatpulse",
   "version": "0.1.0",
   "private": true,
+  "description": "ChatPulse — realtime team chat, wrapped as a desktop app.",
+  "author": "ChatPulse",
   "main": "electron/dist/main.js",
   "scripts": {
     "dev": "tsx server/index.ts",
