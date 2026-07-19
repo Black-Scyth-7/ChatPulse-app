@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { UserSummary } from "@/lib/types";
 import { useDirectMessages } from "@/lib/useDirectMessages";
 import { usePresence } from "@/lib/usePresence";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useDMConversations } from "@/components/sidebar/DMConversationsProvider";
 import { ChatHeader } from "./ChatHeader";
+import { InfoPanel } from "./InfoPanel";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 
@@ -30,6 +31,8 @@ export function DirectMessageView({
 
   const { getStatus } = usePresence();
   const presence = other ? getStatus(other.id) : "offline";
+
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const {
     messages,
@@ -68,7 +71,19 @@ export function DirectMessageView({
 
   return (
     <div className="flex h-full flex-col">
-      <ChatHeader variant="dm" user={other} status={presence} />
+      <ChatHeader
+        variant="dm"
+        user={other}
+        status={presence}
+        onOpenInfo={() => setInfoOpen(true)}
+      />
+      <InfoPanel
+        variant="dm"
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        user={other}
+        status={presence}
+      />
       <MessageList
         messages={messages}
         loading={loading}
