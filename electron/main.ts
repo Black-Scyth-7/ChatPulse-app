@@ -19,9 +19,11 @@ import {
   nativeImage,
   ipcMain,
   Notification,
+  dialog,
   shell,
   type NativeImage,
 } from "electron";
+import { autoUpdater } from "electron-updater";
 import { spawn, type ChildProcess } from "child_process";
 import * as path from "path";
 import * as http from "http";
@@ -248,6 +250,100 @@ async function startAppServer(): Promise<void> {
   await waitForServer(`http://localhost:${APP_PORT}`);
 }
 
+// --- Auto-update -----------------------------------------------------------
+
+/** Re-check for updates on this cadence while the app stays open. */
+const UPDATE_CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
+
+/** Guards against overlapping "update available"/"downloaded" dialogs. */
+let updatePromptOpen = false;
+
+/**
+ * Wire up electron-updater: check on launch and every 4 hours, prompt the user
+ * before downloading, and offer a restart once an update is staged.
+ *
+ * The update source is GitHub Releases (see `publish` in package.json's build
+ * config). No dedicated update server is run; this is the manual/local setup
+ * described by CHAA-54. Every failure path is swallowed with a logged warning
+ * so an unreachable feed never crashes or interrupts the app.
+ */
+function setupAutoUpdater(): void {
+  // autoUpdater only works against a packaged build with real version metadata;
+  // in dev there is nothing to update and forcing it throws.
+  if (isDev) return;
+
+  // Placeholder GitHub Releases feed. Swap owner/repo for the real publish
+  // target once releases are cut; electron-builder also reads this from the
+  // `publish` block in package.json at build time.
+  autoUpdater.setFeedURL({
+    provider: "github",
+    owner: "Black-Scyth-7",
+    repo: "ChatPulse-app",
+  });
+
+  // We drive the download/install ourselves from the dialogs below.
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("update-available", (info) => {
+    if (updatePromptOpen) return;
+    updatePromptOpen = true;
+    dialog
+      .showMessageBox({
+        type: "info",
+        buttons: ["Download now", "Later"],
+        defaultId: 0,
+        cancelId: 1,
+        title: "Update available",
+        message: `ChatPulse ${info.version} is available.`,
+        detail: "Update available. Download now?",
+      })
+      .then(({ response }) => {
+        updatePromptOpen = false;
+        if (response === 0) {
+          autoUpdater.downloadUpdate().catch((err) => {
+            console.error("[chatpulse] update download failed:", err);
+          });
+        }
+      });
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    if (updatePromptOpen) return;
+    updatePromptOpen = true;
+    dialog
+      .showMessageBox({
+        type: "info",
+        buttons: ["Restart to update", "Later"],
+        defaultId: 0,
+        cancelId: 1,
+        title: "Update ready",
+        message: `ChatPulse ${info.version} has been downloaded.`,
+        detail: "Restart the app to finish installing the update.",
+      })
+      .then(({ response }) => {
+        updatePromptOpen = false;
+        if (response === 0) {
+          isQuitting = true; // let the window actually close instead of hiding
+          autoUpdater.quitAndInstall();
+        }
+      });
+  });
+
+  // Keep failures non-fatal: an unreachable feed logs and is otherwise ignored.
+  autoUpdater.on("error", (err) => {
+    console.error("[chatpulse] auto-update error:", err);
+  });
+
+  const check = () =>
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error("[chatpulse] update check failed:", err);
+    });
+
+  check();
+  setInterval(check, UPDATE_CHECK_INTERVAL_MS);
+}
+
 // --- IPC surface (mirrors the API exposed in preload.ts) -------------------
 function registerIpc(): void {
   ipcMain.handle(
@@ -323,6 +419,7 @@ app.whenReady().then(async () => {
   }
   createWindow();
   createTray();
+  setupAutoUpdater();
 
   app.on("activate", () => {
     // macOS: re-create a window when the dock icon is clicked and none are open.
