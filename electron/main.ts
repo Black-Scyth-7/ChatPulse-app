@@ -68,6 +68,16 @@ function resolveIcon(): NativeImage {
   return image.isEmpty() ? nativeImage.createEmpty() : image;
 }
 
+/**
+ * Icon for a message notification: the sender's avatar when a usable URL is
+ * supplied, otherwise the app icon. Electron accepts a string (path/URL) or a
+ * NativeImage; a remote avatar renders where the platform supports it and the
+ * app icon is the guaranteed fallback.
+ */
+function notificationIcon(url?: string): string | NativeImage {
+  return typeof url === "string" && url.length > 0 ? url : resolveIcon();
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -240,18 +250,39 @@ async function startAppServer(): Promise<void> {
 
 // --- IPC surface (mirrors the API exposed in preload.ts) -------------------
 function registerIpc(): void {
-  ipcMain.handle("desktop:notify", (_event, payload: { title: string; body: string }) => {
-    if (notificationsMuted || !Notification.isSupported()) return false;
-    const notification = new Notification({
-      title: String(payload?.title ?? "ChatPulse"),
-      body: String(payload?.body ?? ""),
-      icon: resolveIcon(),
-    });
-    // Clicking a notification should surface the app.
-    notification.on("click", () => showWindow());
-    notification.show();
-    return true;
-  });
+  ipcMain.handle(
+    "desktop:notify",
+    (
+      _event,
+      payload: {
+        title: string;
+        body: string;
+        icon?: string;
+        navigatePath?: string;
+      },
+    ) => {
+      if (notificationsMuted || !Notification.isSupported()) return false;
+      const notification = new Notification({
+        title: String(payload?.title ?? "ChatPulse"),
+        body: String(payload?.body ?? ""),
+        // Use the sender's avatar when supplied (fetched async, falling back to
+        // the app icon if the URL can't be loaded); otherwise the app icon.
+        icon: notificationIcon(payload?.icon),
+      });
+      const navigatePath =
+        typeof payload?.navigatePath === "string" ? payload.navigatePath : null;
+      // Clicking a notification surfaces the app and, if we know where the
+      // message lives, tells the renderer to open that conversation.
+      notification.on("click", () => {
+        showWindow();
+        if (navigatePath) {
+          mainWindow?.webContents.send("desktop:activate", navigatePath);
+        }
+      });
+      notification.show();
+      return true;
+    },
+  );
 
   ipcMain.handle("desktop:set-badge", (_event, count: number) => {
     setBadgeCount(Number(count) || 0);

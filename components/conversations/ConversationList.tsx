@@ -7,6 +7,11 @@ import { cn } from "@/lib/utils";
 import type { PresenceStatus } from "@/lib/socket-events";
 import { useSocket } from "@/lib/useSocket";
 import { PRESENCE_DOT, PRESENCE_LABEL } from "@/lib/usePresence";
+import {
+  NOTIFICATION_MODES,
+  NOTIFICATION_MODE_LABEL,
+} from "@/lib/notifications";
+import { useNotificationSettings } from "@/lib/useNotificationSettings";
 import { CreateChannelModal } from "@/components/sidebar/CreateChannelModal";
 import { UserPicker } from "@/components/sidebar/UserPicker";
 import { ConversationListSkeleton } from "@/components/ui/Skeleton";
@@ -145,6 +150,7 @@ function OverflowMenu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { mode, setMode } = useNotificationSettings();
 
   useEffect(() => {
     if (!open) return;
@@ -182,6 +188,23 @@ function OverflowMenu({
           <button type="button" role="menuitem" className={item} onClick={() => { setOpen(false); onNewGroup(); }}>
             New group
           </button>
+          <div className="my-1 h-px bg-border" role="separator" />
+          <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+            Notifications
+          </div>
+          {NOTIFICATION_MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="menuitemradio"
+              aria-checked={m === mode}
+              className={item}
+              onClick={() => setMode(m)}
+            >
+              <span className="flex-1 text-left">{NOTIFICATION_MODE_LABEL[m]}</span>
+              {m === mode && <span className="text-accent" aria-hidden="true">✓</span>}
+            </button>
+          ))}
           <div className="my-1 h-px bg-border" role="separator" />
           <button
             type="button"

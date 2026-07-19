@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PresenceProvider } from "@/lib/usePresence";
+import { NotificationSettingsProvider } from "@/lib/useNotificationSettings";
 import {
   ConversationList,
   type ConversationListUser,
@@ -44,28 +45,30 @@ export function AppShell({
     <ChannelsProvider currentUserId={currentUserId}>
       <DMConversationsProvider>
         <PresenceProvider>
-          <ConversationsProvider currentUserId={currentUserId}>
-            <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
-              <ConversationList
-                user={user}
-                className={cn(
-                  "w-full md:w-list",
-                  // Mobile: hidden while a chat is open. Desktop: always shown.
-                  hasActiveConversation ? "hidden md:flex" : "flex",
-                )}
-              />
-              <main
-                className={cn(
-                  "min-w-0 flex-1 flex-col",
-                  // Mobile: shown only when a chat is open. Desktop: always shown.
-                  hasActiveConversation ? "flex" : "hidden md:flex",
-                )}
-              >
-                {children}
-              </main>
-            </div>
-            <QuickSwitcher />
-          </ConversationsProvider>
+          <NotificationSettingsProvider>
+            <ConversationsProvider currentUserId={currentUserId}>
+              <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
+                <ConversationList
+                  user={user}
+                  className={cn(
+                    "w-full md:w-list",
+                    // Mobile: hidden while a chat is open. Desktop: always shown.
+                    hasActiveConversation ? "hidden md:flex" : "flex",
+                  )}
+                />
+                <main
+                  className={cn(
+                    "min-w-0 flex-1 flex-col",
+                    // Mobile: shown only when a chat is open. Desktop: always shown.
+                    hasActiveConversation ? "flex" : "hidden md:flex",
+                  )}
+                >
+                  {children}
+                </main>
+              </div>
+              <QuickSwitcher />
+            </ConversationsProvider>
+          </NotificationSettingsProvider>
         </PresenceProvider>
       </DMConversationsProvider>
     </ChannelsProvider>
