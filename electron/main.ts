@@ -31,6 +31,14 @@ const isDev = !app.isPackaged;
 /** URL the renderer loads. Overridable so QA can point at a staging server. */
 const APP_URL = process.env.CHATPULSE_URL ?? "http://localhost:3000";
 
+/**
+ * When true, we manage the app server ourselves: only in a packaged build and
+ * only when no explicit URL was provided. An explicit CHATPULSE_URL means the
+ * server lives elsewhere (dev process, staging, a hosted deploy), so we must
+ * not spawn or wait for a local one.
+ */
+const shouldStartLocalServer = !isDev && !process.env.CHATPULSE_URL;
+
 /** Where the app server listens in a packaged build (dev is external). */
 const APP_PORT = Number(process.env.PORT ?? 3000);
 
@@ -275,7 +283,7 @@ app.on("second-instance", () => showWindow());
 
 app.whenReady().then(async () => {
   registerIpc();
-  if (!isDev) {
+  if (shouldStartLocalServer) {
     try {
       await startAppServer();
     } catch (err) {
