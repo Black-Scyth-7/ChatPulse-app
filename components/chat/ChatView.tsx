@@ -8,6 +8,7 @@ import { useSocket } from "@/lib/useSocket";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useChannels } from "@/components/sidebar/ChannelsProvider";
 import { ChatHeader } from "./ChatHeader";
+import { InfoPanel } from "./InfoPanel";
 import { InviteModal } from "./InviteModal";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
@@ -32,6 +33,7 @@ export function ChatView({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const router = useRouter();
   const { channels, removeChannel } = useChannels();
   const { emit } = useSocket();
@@ -189,22 +191,48 @@ export function ChatView({
     );
   }
 
+  // Action handlers shared by the header menu and the info panel, gated by role.
+  const onInvite =
+    channel && (myRole === "OWNER" || myRole === "ADMIN")
+      ? () => setInviteOpen(true)
+      : undefined;
+  const onLeave = channel ? handleLeave : undefined;
+  const canLeave = myRole !== "OWNER";
+  const onDelete = channel && myRole === "OWNER" ? handleDelete : undefined;
+
   return (
     <div className="flex h-full flex-col">
       <ChatHeader
         variant="channel"
         name={channel?.name ?? "…"}
         memberNames={memberNames}
-        onLeave={channel ? handleLeave : undefined}
-        canLeave={myRole !== "OWNER"}
+        onOpenInfo={() => setInfoOpen(true)}
+        onLeave={onLeave}
+        canLeave={canLeave}
         leaving={leaving}
-        onDelete={channel && myRole === "OWNER" ? handleDelete : undefined}
+        onDelete={onDelete}
         deleting={deleting}
+        onInvite={onInvite}
+      />
+      <InfoPanel
+        variant="channel"
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        channel={channel}
+        currentUserId={currentUser.id}
         onInvite={
-          channel && (myRole === "OWNER" || myRole === "ADMIN")
-            ? () => setInviteOpen(true)
+          onInvite
+            ? () => {
+                setInfoOpen(false);
+                setInviteOpen(true);
+              }
             : undefined
         }
+        onLeave={onLeave}
+        canLeave={canLeave}
+        leaving={leaving}
+        onDelete={onDelete}
+        deleting={deleting}
       />
       <InviteModal
         channelId={channelId}
