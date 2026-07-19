@@ -27,6 +27,30 @@ function GitHubIcon() {
   );
 }
 
+/** Google "G" mark. Uses its brand colours, so it does not inherit currentColor. */
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width={20} height={20}>
+      <path
+        fill="#4285F4"
+        d="M23.52 12.273c0-.851-.076-1.67-.218-2.455H12v4.642h6.458a5.52 5.52 0 0 1-2.394 3.622v3.01h3.878c2.27-2.09 3.578-5.17 3.578-8.82Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.956-1.075 7.942-2.908l-3.878-3.01c-1.075.72-2.45 1.145-4.064 1.145-3.125 0-5.77-2.11-6.714-4.946H1.276v3.11A11.997 11.997 0 0 0 12 24Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.286 14.28A7.216 7.216 0 0 1 4.91 12c0-.79.136-1.558.376-2.28V6.61H1.276A11.997 11.997 0 0 0 0 12c0 1.937.464 3.77 1.276 5.39l4.01-3.11Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.773c1.762 0 3.344.606 4.59 1.795l3.44-3.44C17.952 1.19 15.235 0 12 0A11.997 11.997 0 0 0 1.276 6.61l4.01 3.11C6.23 6.883 8.875 4.774 12 4.774Z"
+      />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-bg p-6">
@@ -67,6 +91,16 @@ export default function LoginPage() {
           >
             <GitHubIcon />
             Continue with GitHub
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              signIn("google", { callbackUrl: POST_LOGIN_REDIRECT })
+            }
+            className="flex w-full items-center justify-center gap-3 rounded-md border border-border bg-surface-raised px-4 py-2.5 text-sm font-medium text-text transition-colors duration-fast hover:bg-surface-overlay focus:outline-none focus-visible:shadow-focus"
+          >
+            <GoogleIcon />
+            Continue with Google
           </button>
         </div>
 
