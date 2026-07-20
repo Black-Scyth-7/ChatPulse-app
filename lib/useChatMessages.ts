@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MessageWithAuthor, MessagesPage, UserSummary } from "./types";
 import type { MessageAck, SerializedMessage } from "./socket-events";
@@ -114,7 +115,7 @@ export function useChatMessages(
     (async () => {
       try {
         const res = await fetch(
-          `/api/channels/${channelId}/messages?limit=${PAGE_SIZE}`,
+          apiUrl(`/api/channels/${channelId}/messages?limit=${PAGE_SIZE}`),
         );
         if (!res.ok) throw new Error(`Failed to load messages (${res.status})`);
         const data: MessagesPage = await res.json();
@@ -194,7 +195,7 @@ export function useChatMessages(
     (async () => {
       try {
         const res = await fetch(
-          `/api/channels/${channelId}/messages?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`,
+          apiUrl(`/api/channels/${channelId}/messages?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`),
         );
         if (!res.ok) throw new Error(`Failed to load messages (${res.status})`);
         const data: MessagesPage = await res.json();

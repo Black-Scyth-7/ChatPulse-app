@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import {
   createContext,
   createElement,
@@ -61,7 +62,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/users/online");
+        const res = await fetch(apiUrl("/api/users/online"));
         if (!res.ok) return;
         const data: { userId: string; status: PresenceStatus }[] =
           await res.json();

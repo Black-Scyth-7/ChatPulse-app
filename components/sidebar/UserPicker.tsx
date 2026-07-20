@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DmConversationSummary, UserSummary } from "@/lib/types";
@@ -74,7 +75,7 @@ export function UserPicker({
     const timer = setTimeout(async () => {
       try {
         const res = await fetch(
-          `/api/users?q=${encodeURIComponent(query.trim())}`,
+          apiUrl(`/api/users?q=${encodeURIComponent(query.trim())}`),
         );
         if (!res.ok) throw new Error(`Failed to load users (${res.status})`);
         const data: { users?: UserSummary[] } = await res.json();
@@ -98,7 +99,7 @@ export function UserPicker({
     setCreatingId(user.id);
     setError(null);
     try {
-      const res = await fetch("/api/dm", {
+      const res = await fetch(apiUrl("/api/dm"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: user.id }),

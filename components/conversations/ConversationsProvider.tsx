@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import {
   createContext,
   useCallback,
@@ -104,7 +105,7 @@ export function ConversationsProvider({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/conversations");
+        const res = await fetch(apiUrl("/api/conversations"));
         if (!res.ok) throw new Error(`Failed (${res.status})`);
         const data: { conversations?: ConversationListItem[] } =
           await res.json();
@@ -284,7 +285,7 @@ export function ConversationsProvider({
       active.type === "channel"
         ? `/api/channels/${active.id}/read`
         : `/api/dm/${active.id}/read`;
-    void fetch(path, { method: "POST" }).catch(() => {});
+    void fetch(apiUrl(path), { method: "POST" }).catch(() => {});
     // `active` is a fresh object each render; depend on its primitive fields so
     // this only fires when the open conversation actually changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps

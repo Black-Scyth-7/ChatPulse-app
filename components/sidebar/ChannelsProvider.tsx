@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import {
   createContext,
   useCallback,
@@ -86,7 +87,7 @@ export function ChannelsProvider({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/channels");
+        const res = await fetch(apiUrl("/api/channels"));
         if (!res.ok) throw new Error(`Failed to load channels (${res.status})`);
         const data: { channels?: ChannelSummary[] } = await res.json();
         if (cancelled) return;
@@ -126,7 +127,7 @@ export function ChannelsProvider({
       prev[channelId] ? { ...prev, [channelId]: 0 } : prev,
     );
     // Fire-and-forget: the badge is already cleared optimistically.
-    void fetch(`/api/channels/${channelId}/read`, { method: "POST" }).catch(
+    void fetch(apiUrl(`/api/channels/${channelId}/read`), { method: "POST" }).catch(
       () => {},
     );
   }, []);
@@ -154,7 +155,7 @@ export function ChannelsProvider({
         if (activeReadTimer) clearTimeout(activeReadTimer);
         const channelId = msg.channelId;
         activeReadTimer = setTimeout(() => {
-          void fetch(`/api/channels/${channelId}/read`, {
+          void fetch(apiUrl(`/api/channels/${channelId}/read`), {
             method: "POST",
           }).catch(() => {});
         }, 750);

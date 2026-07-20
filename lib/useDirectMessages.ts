@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   DirectMessageWithAuthor,
@@ -111,7 +112,7 @@ export function useDirectMessages(
     (async () => {
       try {
         const res = await fetch(
-          `/api/dm/${conversationId}/messages?limit=${PAGE_SIZE}`,
+          apiUrl(`/api/dm/${conversationId}/messages?limit=${PAGE_SIZE}`),
         );
         if (!res.ok) throw new Error(`Failed to load messages (${res.status})`);
         const data: DirectMessagesPage = await res.json();
@@ -174,7 +175,7 @@ export function useDirectMessages(
     (async () => {
       try {
         const res = await fetch(
-          `/api/dm/${conversationId}/messages?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`,
+          apiUrl(`/api/dm/${conversationId}/messages?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`),
         );
         if (!res.ok) throw new Error(`Failed to load messages (${res.status})`);
         const data: DirectMessagesPage = await res.json();

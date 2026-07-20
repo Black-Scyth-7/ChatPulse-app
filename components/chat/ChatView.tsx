@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ChannelDetail, UserSummary } from "@/lib/types";
@@ -61,7 +62,7 @@ export function ChatView({
     setChannelError(null);
     (async () => {
       try {
-        const res = await fetch(`/api/channels/${channelId}`);
+        const res = await fetch(apiUrl(`/api/channels/${channelId}`));
         if (!res.ok) {
           throw new Error(
             res.status === 403
@@ -120,7 +121,7 @@ export function ChatView({
     setLeaving(true);
     setLeaveError(null);
     try {
-      const res = await fetch(`/api/channels/${channelId}/leave`, {
+      const res = await fetch(apiUrl(`/api/channels/${channelId}/leave`), {
         method: "POST",
       });
       if (res.ok) {
@@ -150,7 +151,7 @@ export function ChatView({
     setDeleting(true);
     setDeleteError(null);
     try {
-      const res = await fetch(`/api/channels/${channelId}`, {
+      const res = await fetch(apiUrl(`/api/channels/${channelId}`), {
         method: "DELETE",
       });
       if (res.ok) {
