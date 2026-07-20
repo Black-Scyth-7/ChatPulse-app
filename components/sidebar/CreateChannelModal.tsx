@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -83,7 +84,7 @@ export function CreateChannelModal({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/channels", {
+      const res = await fetch(apiUrl("/api/channels"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

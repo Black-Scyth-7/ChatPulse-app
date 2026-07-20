@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import {
   createContext,
   useCallback,
@@ -67,7 +68,7 @@ export function DMConversationsProvider({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/dm");
+        const res = await fetch(apiUrl("/api/dm"));
         if (!res.ok) throw new Error(`Failed to load DMs (${res.status})`);
         const data: { conversations?: DmConversationSummary[] } =
           await res.json();

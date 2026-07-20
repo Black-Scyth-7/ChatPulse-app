@@ -1,5 +1,6 @@
 "use client";
 
+import { apiUrl } from "@/lib/apiBase";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { UserSummary } from "@/lib/types";
 import { usePresence } from "@/lib/usePresence";
@@ -70,7 +71,7 @@ export function InviteModal({
     setToast(null);
     (async () => {
       try {
-        const res = await fetch(`/api/channels/${channelId}/non-members`);
+        const res = await fetch(apiUrl(`/api/channels/${channelId}/non-members`));
         if (!res.ok) throw new Error(`Failed (${res.status})`);
         const data: { users?: UserSummary[] } = await res.json();
         if (cancelled) return;
@@ -112,7 +113,7 @@ export function InviteModal({
     async (user: UserSummary) => {
       setInvitingId(user.id);
       try {
-        const res = await fetch(`/api/channels/${channelId}/invite`, {
+        const res = await fetch(apiUrl(`/api/channels/${channelId}/invite`), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId: user.id }),

@@ -1,4 +1,5 @@
 import { io, type Socket } from "socket.io-client";
+import { API_BASE_URL } from "./apiBase";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -25,8 +26,11 @@ let refCount = 0;
 /** Return the shared socket, creating it (disconnected) on first use. */
 function getSocket(): ChatSocket {
   if (!socket) {
-    socket = io({
-      // Same-origin connection; the cookie handshake authenticates the user.
+    // No base URL (web/desktop) connects same-origin; a configured
+    // NEXT_PUBLIC_API_URL (mobile) points the socket at the hosted backend.
+    socket = io(API_BASE_URL || undefined, {
+      // Same-origin sends the NextAuth cookie; cross-origin relies on CORS
+      // credentials on the backend handshake.
       withCredentials: true,
       autoConnect: false,
       transports: ["websocket", "polling"],
