@@ -4,6 +4,7 @@ import { apiUrl } from "@/lib/apiBase";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DmConversationSummary, UserSummary } from "@/lib/types";
+import { useBackHandler } from "@/components/native/NativeUxProvider";
 import { useDMConversations } from "./DMConversationsProvider";
 
 /**
@@ -56,7 +57,7 @@ export function UserPicker({
     }
   }, [open]);
 
-  // Close on Escape.
+  // Close on Escape (desktop) or the Android hardware back button (native).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -65,6 +66,7 @@ export function UserPicker({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+  useBackHandler(open, onClose);
 
   // Debounced user search. Runs on open (empty query → first page) and on each
   // query change; races are guarded with a cancellation flag.

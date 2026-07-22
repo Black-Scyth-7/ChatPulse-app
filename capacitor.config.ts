@@ -27,10 +27,17 @@ const config: CapacitorConfig = {
     : {}),
   plugins: {
     SplashScreen: {
+      // Auto-hide once the webview reports loaded; the client also calls
+      // SplashScreen.hide() on mount (lib/nativeShell.ts) so the logo clears
+      // exactly when the app is ready without risking a hang.
       launchAutoHide: true,
       androidSplashResourceName: "splash",
+      // ChatPulse logo centered on the chat-canvas background (#0B141A).
+      backgroundColor: "#0B141A",
+      showSpinner: false,
     },
     StatusBar: {
+      // Style.Dark = light icons/text, over our dark app-header background.
       style: "dark",
       backgroundColor: "#1F2C34",
     },

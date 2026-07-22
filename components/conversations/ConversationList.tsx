@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import type { PresenceStatus } from "@/lib/socket-events";
 import { useSocket } from "@/lib/useSocket";
 import { PRESENCE_DOT, PRESENCE_LABEL } from "@/lib/usePresence";
@@ -235,6 +236,14 @@ export function ConversationList({
   const [createOpen, setCreateOpen] = useState(false);
   const [dmPickerOpen, setDmPickerOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Pull down at the top of the list to refetch conversations (native app).
+  const { indicator } = usePullToRefresh(listRef, () => {
+    reload();
+    // Keep the spinner up briefly so the gesture reads as a real refresh.
+    return new Promise<void>((resolve) => setTimeout(resolve, 700));
+  });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -298,7 +307,11 @@ export function ConversationList({
       </div>
 
       {/* List */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        ref={listRef}
+        className="relative min-h-0 flex-1 overflow-y-auto pb-safe"
+      >
+        {indicator}
         {status === "loading" ? (
           <ConversationListSkeleton />
         ) : status === "error" ? (

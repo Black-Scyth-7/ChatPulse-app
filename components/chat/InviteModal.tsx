@@ -4,6 +4,7 @@ import { apiUrl } from "@/lib/apiBase";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { UserSummary } from "@/lib/types";
 import { usePresence } from "@/lib/usePresence";
+import { useBackHandler } from "@/components/native/NativeUxProvider";
 import { Avatar } from "./Avatar";
 
 /**
@@ -86,7 +87,7 @@ export function InviteModal({
     };
   }, [open, channelId, reloadNonce]);
 
-  // Close on Escape.
+  // Close on Escape (desktop) or the Android hardware back button (native).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -95,6 +96,7 @@ export function InviteModal({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+  useBackHandler(open, onClose);
 
   // Clear any pending toast timer on unmount.
   useEffect(() => {

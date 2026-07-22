@@ -5,6 +5,7 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { ChannelSummary } from "@/lib/types";
+import { useBackHandler } from "@/components/native/NativeUxProvider";
 import { useChannels } from "./ChannelsProvider";
 
 /**
@@ -59,7 +60,7 @@ export function CreateChannelModal({
     }
   }, [open]);
 
-  // Close on Escape.
+  // Close on Escape (desktop) or the Android hardware back button (native).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -68,6 +69,7 @@ export function CreateChannelModal({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+  useBackHandler(open, onClose);
 
   if (!open) return null;
 

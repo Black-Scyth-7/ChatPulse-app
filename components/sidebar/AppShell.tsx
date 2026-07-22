@@ -9,6 +9,7 @@ import {
   type ConversationListUser,
 } from "@/components/conversations/ConversationList";
 import { ConversationsProvider } from "@/components/conversations/ConversationsProvider";
+import { NativeUxProvider } from "@/components/native/NativeUxProvider";
 import { ChannelsProvider } from "./ChannelsProvider";
 import { DMConversationsProvider } from "./DMConversationsProvider";
 import { QuickSwitcher } from "./QuickSwitcher";
@@ -47,26 +48,28 @@ export function AppShell({
         <PresenceProvider>
           <NotificationSettingsProvider>
             <ConversationsProvider currentUserId={currentUserId}>
-              <div className="flex h-screen w-screen overflow-hidden bg-bg font-sans text-text">
-                <ConversationList
-                  user={user}
-                  className={cn(
-                    "w-full md:w-list",
-                    // Mobile: hidden while a chat is open. Desktop: always shown.
-                    hasActiveConversation ? "hidden md:flex" : "flex",
-                  )}
-                />
-                <main
-                  className={cn(
-                    "min-w-0 flex-1 flex-col",
-                    // Mobile: shown only when a chat is open. Desktop: always shown.
-                    hasActiveConversation ? "flex" : "hidden md:flex",
-                  )}
-                >
-                  {children}
-                </main>
-              </div>
-              <QuickSwitcher />
+              <NativeUxProvider>
+                <div className="flex h-screen w-screen overflow-hidden bg-bg px-safe font-sans text-text">
+                  <ConversationList
+                    user={user}
+                    className={cn(
+                      "w-full md:w-list",
+                      // Mobile: hidden while a chat is open. Desktop: always shown.
+                      hasActiveConversation ? "hidden md:flex" : "flex",
+                    )}
+                  />
+                  <main
+                    className={cn(
+                      "min-w-0 flex-1 flex-col",
+                      // Mobile: shown only when a chat is open. Desktop: always shown.
+                      hasActiveConversation ? "flex" : "hidden md:flex",
+                    )}
+                  >
+                    {children}
+                  </main>
+                </div>
+                <QuickSwitcher />
+              </NativeUxProvider>
             </ConversationsProvider>
           </NotificationSettingsProvider>
         </PresenceProvider>

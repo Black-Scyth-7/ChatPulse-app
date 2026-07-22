@@ -8,6 +8,7 @@ import {
   presenceRank,
   usePresence,
 } from "@/lib/usePresence";
+import { useBackHandler } from "@/components/native/NativeUxProvider";
 import { Avatar } from "./Avatar";
 
 /**
@@ -70,7 +71,8 @@ export function InfoPanel(props: InfoPanelProps) {
   const titleId = useId();
   const { getStatus } = usePresence();
 
-  // Close on Escape (click-outside is handled by the backdrop).
+  // Close on Escape (click-outside is handled by the backdrop) or the Android
+  // hardware back button (native).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -79,6 +81,7 @@ export function InfoPanel(props: InfoPanelProps) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+  useBackHandler(open, onClose);
 
   // Roster ordered by role then presence then name, with the current user
   // pinned first. Computed unconditionally to keep hook order stable; only used
