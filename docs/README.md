@@ -7,6 +7,8 @@ Specs and documentation for ChatPulse — a real-time team chat app.
 > Deployment note: set `NEXTAUTH_URL` (and, for the mobile build, `CAP_SERVER_URL` /
 > `NEXT_PUBLIC_API_URL`) to `https://chatpulse-gk3z.onrender.com` in the hosting
 > environment. OAuth callback URLs and Socket.io CORS derive from `NEXTAUTH_URL`.
+> The Render web service is codified in [`render.yaml`](../render.yaml) at the repo
+> root, which pins that origin and the build/start commands (secrets stay dashboard-only).
 
 ## Contents
 

@@ -1,0 +1,45 @@
+# Render Blueprint for ChatPulse — infra-as-code for the live deployment.
+#
+#   Live: https://chatpulse-gk3z.onrender.com
+#
+# This pins the public origin (NEXTAUTH_URL) that the app derives OAuth callback
+# URLs, Socket.io CORS, and secure-cookie selection from (see server/index.ts),
+# so the URL is "set right" in code rather than only in the dashboard.
+#
+# IMPORTANT: `name` below must match the EXISTING Render service that already
+# serves chatpulse-gk3z.onrender.com. If the existing service has a different
+# internal name, rename this to match (or rename the service) — otherwise a
+# Blueprint sync creates a NEW service at a different *.onrender.com host, which
+# is the opposite of setting the URL right. Secrets are marked `sync: false`;
+# set their values in the Render dashboard (they are never committed).
+services:
+  - type: web
+    name: chatpulse-gk3z
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm db:generate && pnpm exec prisma migrate deploy && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Public origin — drives OAuth callbacks, Socket.io CORS, secure cookies.
+      - key: NEXTAUTH_URL
+        value: https://chatpulse-gk3z.onrender.com
+      # server/index.ts reads AUTH_SECRET ?? NEXTAUTH_SECRET.
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Optional — Android push (CHAA-55). Leave unset on web-only deploys.
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
