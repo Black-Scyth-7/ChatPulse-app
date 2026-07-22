@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 import { cn } from "@/lib/utils";
+import { hapticImpact } from "@/lib/haptics";
+import { useBackHandler } from "@/components/native/NativeUxProvider";
 
 /** Hard message length limit (matches the server-side validator's intent). */
 const MAX_LENGTH = 2000;
@@ -180,15 +182,20 @@ export function ChatInput({
     if (next.trim()) signalTyping();
   };
 
+  // Close the emoji picker on the Android hardware back button (native only).
+  useBackHandler(emojiOpen, () => setEmojiOpen(false));
+
   const send = () => {
     if (!canSend || disabled) return;
+    // A short buzz confirms the send on the native app (no-op on web/desktop).
+    hapticImpact("light");
     onSend(trimmed);
     setValue("");
     stopTyping();
   };
 
   return (
-    <div className="shrink-0 bg-header px-3 py-2.5">
+    <div className="shrink-0 bg-header px-3 pt-2.5 pb-safe-2.5">
       <div className="flex items-end gap-1.5">
         {/* Center: rounded field with an emoji button + picker and the textarea. */}
         <div className="flex flex-1 items-end gap-1 rounded-lg bg-surface px-2 py-1.5">

@@ -24,6 +24,7 @@ import {
 } from "@/lib/notifications";
 import { useNotificationSettings } from "@/lib/useNotificationSettings";
 import { registerPushNotifications, updatePushMode } from "@/lib/mobilePush";
+import { hapticImpact } from "@/lib/haptics";
 
 /**
  * Client-side store for the unified WhatsApp-style conversation list — channels
@@ -171,6 +172,13 @@ export function ConversationsProvider({
           ...prev.filter((c) => !(c.type === type && c.id === convId)),
         ];
       });
+
+      // A short buzz when a message from someone else lands while the app is
+      // open (native only — no-op on web/desktop). Fires even for the focused
+      // conversation, mirroring the "receiving message" haptic cue.
+      if (known && !isOwn) {
+        hapticImpact("light");
+      }
 
       // Notify for messages from others in a conversation the user isn't
       // actively watching, subject to the mute/DM-only preference.

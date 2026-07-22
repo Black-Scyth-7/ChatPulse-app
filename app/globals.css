@@ -13,3 +13,23 @@ html {
 body {
   @apply bg-bg text-text font-sans antialiased;
 }
+
+/*
+ * Safe-area helpers for the Android app (CHAA-56). With `viewport-fit=cover`
+ * the layout runs edge-to-edge, so app chrome pads itself clear of the notch
+ * and gesture-navigation bar. `env(safe-area-inset-*)` resolves to 0 on the
+ * web/desktop build, so these are inert there.
+ */
+@layer utilities {
+  .px-safe {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Base bottom padding plus the gesture-nav inset, for the composer bar. */
+  .pb-safe-2\.5 {
+    padding-bottom: calc(0.625rem + env(safe-area-inset-bottom));
+  }
+}

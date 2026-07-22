@@ -20,6 +20,7 @@
  * their methods are unimplemented on web, so we never load or call them there.
  */
 import { apiUrl } from "./apiBase";
+import { isNativePlatform } from "./capacitor";
 import { loadNotificationMode, type NotificationMode } from "./notifications";
 
 /** Data payload FCM delivers with each ChatPulse push. */
@@ -30,19 +31,6 @@ interface PushData {
 
 /** The most recent FCM token, kept so a mode change can re-send it. */
 let lastToken: string | null = null;
-
-/** True only inside the Capacitor native shell (Android/iOS). SSR-safe. */
-export function isNativePlatform(): boolean {
-  if (typeof window === "undefined") return false;
-  const cap = (
-    window as unknown as {
-      Capacitor?: { isNativePlatform?: () => boolean };
-    }
-  ).Capacitor;
-  return typeof cap?.isNativePlatform === "function"
-    ? cap.isNativePlatform()
-    : false;
-}
 
 /** POST the current token + mode to the backend. Silent on failure. */
 async function sendToken(token: string, mode: NotificationMode): Promise<void> {

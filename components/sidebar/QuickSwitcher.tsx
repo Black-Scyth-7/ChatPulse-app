@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useBackHandler } from "@/components/native/NativeUxProvider";
 import { useChannels } from "./ChannelsProvider";
 import { useDMConversations } from "./DMConversationsProvider";
 
@@ -78,6 +79,9 @@ export function QuickSwitcher() {
   useEffect(() => {
     setActiveIndex((i) => Math.min(i, Math.max(0, items.length - 1)));
   }, [items.length]);
+
+  // Android hardware back button closes the palette (like Escape).
+  useBackHandler(open, () => setOpen(false));
 
   if (!open) return null;
 

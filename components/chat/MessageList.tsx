@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { format, isSameDay, isToday, isYesterday } from "date-fns";
 import type { ChatMessage } from "@/lib/useChatMessages";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { MessageListSkeleton } from "@/components/ui/Skeleton";
 import { ChatBubble } from "./ChatBubble";
 
@@ -119,6 +120,17 @@ export function MessageList({
     setUnread(0);
   }, []);
 
+  // Pull down at the top of the thread to load the previous page of messages
+  // (native app). Only enabled while an older page exists.
+  const { indicator } = usePullToRefresh(
+    containerRef,
+    () => {
+      if (hasMore && !loadingMore) loadOlder();
+      return new Promise<void>((resolve) => setTimeout(resolve, 500));
+    },
+    hasMore,
+  );
+
   const onScroll = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -197,6 +209,7 @@ export function MessageList({
 
   return (
     <div className="relative flex-1 overflow-hidden">
+      {indicator}
       <div
         ref={containerRef}
         onScroll={onScroll}
