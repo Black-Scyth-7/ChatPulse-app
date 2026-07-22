@@ -37,6 +37,10 @@ prisma/*.db-journal
 android/app/google-services.json
 firebase-service-account*.json
 
+# android signing keystore — never commit, cannot be regenerated if lost
+*.keystore
+*.jks
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
