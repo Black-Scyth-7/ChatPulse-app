@@ -51,6 +51,14 @@ model User {
   // Presence tracking for the online/away/offline indicator.
   status        UserStatus @default(OFFLINE)
   lastSeen      DateTime   @default(now())
+  // Push notifications (CHAA-55): the device FCM registration token, refreshed
+  // by the mobile client whenever it changes. Nullable: web/desktop users and
+  // signed-out devices have none. `notificationMode` mirrors the client's
+  // notification preference server-side so offline FCM pushes can honour a
+  // muted / DMs-only choice without the browser being connected.
+  pushToken            String?
+  pushTokenUpdatedAt   DateTime?
+  notificationMode     String    @default("all")
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

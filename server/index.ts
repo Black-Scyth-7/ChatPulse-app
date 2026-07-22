@@ -29,6 +29,7 @@ import {
 import { dmSendSchema } from "../lib/validators/dm";
 import { presenceUpdateSchema } from "../lib/validators/presence";
 import { setIoServer, toUserStatus } from "../lib/presence";
+import { sendPushNotification } from "../lib/firebase";
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -47,6 +48,31 @@ const OFFLINE_GRACE_MS = 30_000;
 
 const room = (channelId: string) => `channel:${channelId}`;
 const dmRoom = (conversationId: string) => `dm:${conversationId}`;
+
+/** Max characters in a push-notification body preview (mirrors the API). */
+const PUSH_PREVIEW_MAX = 100;
+
+/** Truncate a message body for the push preview, matching the in-app preview. */
+function pushPreview(body: string): string {
+  return body.length > PUSH_PREVIEW_MAX
+    ? `${body.slice(0, PUSH_PREVIEW_MAX)}…`
+    : body;
+}
+
+/**
+ * Whether a recipient's stored notification mode permits a push of this type.
+ * Mirrors lib/notifications.ts `shouldNotify`: `muted` suppresses everything and
+ * `dm` allows only direct messages. This backs the "no notification for muted
+ * conversations" acceptance criterion at the app's (global) mute granularity.
+ */
+function pushAllowedByMode(
+  mode: string,
+  type: "channel" | "dm",
+): boolean {
+  if (mode === "muted") return false;
+  if (mode === "dm") return type === "dm";
+  return true;
+}
 
 /** Shape a Prisma message (with its author) for the wire. */
 function serializeMessage(m: {
@@ -235,6 +261,106 @@ async function main() {
     }
   }
 
+  // --- Offline push notifications (FCM) ------------------------------------
+  // A recipient with no live socket is "offline" — the app is backgrounded or
+  // closed on their device — so the in-app/browser notification path can't
+  // reach them. For those users we fall back to a Firebase Cloud Messaging push
+  // (see lib/firebase.ts). Users with a live socket already get the realtime
+  // `message:new` / `dm:new` event and its in-app toast, so we skip them.
+
+  /** Send a push to one recipient if they're offline and opted in. */
+  async function pushToRecipient(
+    user: { id: string; pushToken: string | null; notificationMode: string },
+    ctx: {
+      conversationId: string;
+      type: "channel" | "dm";
+      senderName: string;
+      body: string;
+    },
+  ): Promise<void> {
+    // Online elsewhere: the realtime event + in-app notification cover it.
+    if (socketsByUser.has(user.id)) return;
+    if (!user.pushToken) return;
+    if (!pushAllowedByMode(user.notificationMode, ctx.type)) return;
+
+    const result = await sendPushNotification({
+      token: user.pushToken,
+      title: ctx.senderName,
+      body: pushPreview(ctx.body),
+      conversationId: ctx.conversationId,
+      type: ctx.type,
+    });
+    // The token is dead (app uninstalled / permission revoked): drop it so we
+    // stop pushing to it. FCM rotates a fresh one on next launch.
+    if (result === "unregistered") {
+      await prisma.user
+        .update({ where: { id: user.id }, data: { pushToken: null } })
+        .catch((e) => console.error("[socket] clear stale push token:", e));
+    }
+  }
+
+  /** Push a new channel message to every offline member except the author. */
+  async function pushOfflineChannelMembers(params: {
+    channelId: string;
+    authorId: string;
+    senderName: string;
+    body: string;
+  }): Promise<void> {
+    const members = await prisma.channelMember.findMany({
+      where: {
+        channelId: params.channelId,
+        userId: { not: params.authorId },
+        user: { pushToken: { not: null } },
+      },
+      select: {
+        user: {
+          select: { id: true, pushToken: true, notificationMode: true },
+        },
+      },
+    });
+    await Promise.all(
+      members.map((m) =>
+        pushToRecipient(m.user, {
+          conversationId: params.channelId,
+          type: "channel",
+          senderName: params.senderName,
+          body: params.body,
+        }),
+      ),
+    );
+  }
+
+  /** Push a new DM to every offline participant except the author. */
+  async function pushOfflineDmParticipants(params: {
+    conversationId: string;
+    authorId: string;
+    senderName: string;
+    body: string;
+  }): Promise<void> {
+    const parts = await prisma.directConversationParticipant.findMany({
+      where: {
+        conversationId: params.conversationId,
+        userId: { not: params.authorId },
+        user: { pushToken: { not: null } },
+      },
+      select: {
+        user: {
+          select: { id: true, pushToken: true, notificationMode: true },
+        },
+      },
+    });
+    await Promise.all(
+      parts.map((p) =>
+        pushToRecipient(p.user, {
+          conversationId: params.conversationId,
+          type: "dm",
+          senderName: params.senderName,
+          body: params.body,
+        }),
+      ),
+    );
+  }
+
   // --- Auth middleware -----------------------------------------------------
   io.use(async (socket, nextFn) => {
     try {
@@ -341,6 +467,15 @@ async function main() {
         const payload = serializeMessage(created);
         io.to(room(channelId)).emit("message:new", payload);
         ack?.({ ok: true, message: payload });
+        // Reach offline members via FCM; non-blocking so the ack isn't delayed.
+        void pushOfflineChannelMembers({
+          channelId,
+          authorId: userId,
+          senderName: created.author.name ?? "New message",
+          body,
+        }).catch((e) =>
+          console.error("[socket] channel offline push failed:", e),
+        );
       } catch (err) {
         console.error("[socket] message:send failed:", err);
         ack?.({ ok: false, error: "Failed to send message" });
@@ -441,6 +576,13 @@ async function main() {
         const payload = serializeDirectMessage(created);
         io.to(dmRoom(conversationId)).emit("dm:new", payload);
         ack?.({ ok: true, message: payload });
+        // Reach the offline participant via FCM; non-blocking.
+        void pushOfflineDmParticipants({
+          conversationId,
+          authorId: userId,
+          senderName: created.author.name ?? "New message",
+          body: content,
+        }).catch((e) => console.error("[socket] dm offline push failed:", e));
       } catch (err) {
         console.error("[socket] dm:send failed:", err);
         ack?.({ ok: false, error: "Failed to send direct message" });
