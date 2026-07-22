@@ -2,6 +2,12 @@
 
 Specs and documentation for ChatPulse — a real-time team chat app.
 
+**Live:** https://chatpulse-gk3z.onrender.com
+
+> Deployment note: set `NEXTAUTH_URL` (and, for the mobile build, `CAP_SERVER_URL` /
+> `NEXT_PUBLIC_API_URL`) to `https://chatpulse-gk3z.onrender.com` in the hosting
+> environment. OAuth callback URLs and Socket.io CORS derive from `NEXTAUTH_URL`.
+
 ## Contents
 
 - `design/tokens.md` — design system tokens (color, spacing, typography, radius, shadow, motion).

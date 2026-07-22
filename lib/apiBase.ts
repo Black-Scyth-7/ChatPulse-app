@@ -7,7 +7,7 @@
  *
  * In the Capacitor (mobile) build the web assets are packaged into the app and
  * have no server of their own, so `NEXT_PUBLIC_API_URL` must point at the hosted
- * backend (e.g. `https://chatpulse.example.com`). All client fetches and the
+ * backend (e.g. `https://chatpulse-gk3z.onrender.com`). All client fetches and the
  * realtime socket are routed through here so a single env var retargets them.
  */
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
