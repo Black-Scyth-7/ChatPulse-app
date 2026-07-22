@@ -22,10 +22,18 @@ export const authConfig: NextAuthConfig = {
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      // PKCE relies on a short-lived cookie that has a widely-reported,
+      // unresolved parsing failure across next-auth v5 betas (e.g.
+      // nextauthjs/next-auth#12345, #12365, #13284), hitting some mobile
+      // browsers in particular. Both providers are confidential clients
+      // (server holds a client secret), so PKCE is defense-in-depth, not
+      // required — `state` alone still prevents CSRF on the callback.
+      checks: ["state"],
     }),
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      checks: ["state"],
     }),
   ],
   pages: {
