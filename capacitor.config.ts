@@ -3,24 +3,27 @@ import type { CapacitorConfig } from "@capacitor/cli";
 /**
  * Capacitor configuration for the ChatPulse Android app.
  *
- * The mobile shell has no backend of its own, so it talks to a hosted ChatPulse
- * deployment for both the JSON API and the realtime socket (see
- * `lib/apiBase.ts` / `NEXT_PUBLIC_API_URL`).
+ * Approach (CHAA-51 decision): **remote webview**. The native shell loads the
+ * hosted ChatPulse web app directly over `server.url`, so the app reuses the
+ * existing SSR site, cookie auth, JSON API and Socket.io as-is — no static
+ * export / SPA refactor required.
  *
- * Live-reload against a running dev server is opt-in: set `CAP_SERVER_URL` to
- * your machine's LAN address (e.g. `http://192.168.1.20:3000`) before running
- * `pnpm cap sync`. When unset, the packaged web assets in `webDir` are loaded.
- * `cleartext` is only enabled for the dev URL so HTTP works locally; production
- * traffic stays HTTPS.
+ * Point it at the backend with `CAP_SERVER_URL` (a production HTTPS URL, or a
+ * LAN `http://192.168.x.x:3000` for dev live-reload); falls back to
+ * `NEXT_PUBLIC_API_URL`. `cleartext` is enabled only for plain-HTTP dev URLs so
+ * production stays HTTPS-only. When neither is set the bundled placeholder shell
+ * in `webDir` is shown with setup instructions.
  */
-const devServerUrl = process.env.CAP_SERVER_URL;
+const serverUrl =
+  process.env.CAP_SERVER_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "";
+const isHttp = serverUrl.startsWith("http://");
 
 const config: CapacitorConfig = {
   appId: "com.chatpulse.app",
   appName: "ChatPulse",
-  webDir: "out",
-  ...(devServerUrl
-    ? { server: { url: devServerUrl, cleartext: true } }
+  webDir: "mobile/shell",
+  ...(serverUrl
+    ? { server: { url: serverUrl, cleartext: isHttp } }
     : {}),
   plugins: {
     SplashScreen: {

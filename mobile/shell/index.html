@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <title>ChatPulse</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #1f2c34;
+        color: #e9edef;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      .wrap {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 0 24px;
+        text-align: center;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      p {
+        margin: 0;
+        max-width: 22rem;
+        font-size: 14px;
+        color: #8696a0;
+      }
+      code {
+        color: #e9edef;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Remote-webview placeholder. When CAP_SERVER_URL / NEXT_PUBLIC_API_URL is
+      configured, Capacitor's server.url loads the hosted ChatPulse app instead
+      of this file. This shell is only shown when no backend URL is set.
+    -->
+    <div class="wrap">
+      <h1>ChatPulse</h1>
+      <p>
+        No backend configured. Set <code>CAP_SERVER_URL</code> to your hosted
+        ChatPulse deployment and run <code>pnpm mobile:build</code>.
+      </p>
+    </div>
+  </body>
+</html>

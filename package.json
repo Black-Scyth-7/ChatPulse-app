@@ -16,7 +16,7 @@
     "electron:start": "electron .",
     "electron:dev": "concurrently -k -n next,electron -c blue,magenta \"pnpm dev\" \"wait-on http://localhost:3000 && pnpm electron:compile && pnpm electron:start\"",
     "electron:build": "next build && pnpm electron:compile && electron-builder --win",
-    "mobile:build": "next build && cap sync",
+    "mobile:build": "cap sync",
     "mobile:open": "cap open android",
     "mobile:run": "cap run android",
     "db:generate": "prisma generate",
@@ -87,6 +87,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.4.2",
     "@capacitor/cli": "^8.4.2",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.4",
