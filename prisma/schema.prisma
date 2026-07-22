@@ -48,6 +48,9 @@ model User {
   email         String?    @unique
   emailVerified DateTime?
   image         String?
+  // Email/password auth (CHAA): the bcrypt hash of the user's password. Nullable
+  // because OAuth-only users never set one; the plaintext is never persisted.
+  hashedPassword String?
   // Presence tracking for the online/away/offline indicator.
   status        UserStatus @default(OFFLINE)
   lastSeen      DateTime   @default(now())

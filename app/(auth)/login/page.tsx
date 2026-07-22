@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 /**
@@ -52,6 +54,65 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+  // "signin" = existing account; "signup" = create one. The email/password form
+  // is shared between the two modes, with the extra name field shown for signup.
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const isSignup = mode === "signup";
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    try {
+      // Sign-up first provisions the account, then falls through to the same
+      // credentials sign-in below so the user lands logged in.
+      if (isSignup) {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          setError(
+            data?.error ?? "Could not create your account. Please try again.",
+          );
+          return;
+        }
+      }
+
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(
+          isSignup
+            ? "Account created, but sign-in failed. Try signing in."
+            : "Invalid email or password.",
+        );
+        return;
+      }
+
+      router.push(POST_LOGIN_REDIRECT);
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-bg p-6">
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-8 shadow-md">
@@ -78,8 +139,91 @@ export default function LoginPage() {
         </div>
 
         <h1 className="mb-6 text-center text-lg font-semibold text-text">
-          Sign in to ChatPulse
+          {isSignup ? "Create your account" : "Sign in to ChatPulse"}
         </h1>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {isSignup && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-text">Name</span>
+              <input
+                type="text"
+                name="name"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus-visible:shadow-focus"
+              />
+            </label>
+          )}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-text">Email</span>
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus-visible:shadow-focus"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-text">Password</span>
+            <input
+              type="password"
+              name="password"
+              autoComplete={isSignup ? "new-password" : "current-password"}
+              required
+              minLength={isSignup ? 8 : undefined}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="rounded-md border border-border bg-surface-raised px-3 py-2 text-sm text-text placeholder:text-text-muted focus:outline-none focus-visible:shadow-focus"
+            />
+          </label>
+
+          {error && (
+            <p role="alert" className="text-sm text-danger">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="mt-1 flex w-full items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-accent-fg transition-colors duration-fast hover:opacity-90 focus:outline-none focus-visible:shadow-focus disabled:opacity-60"
+          >
+            {submitting
+              ? isSignup
+                ? "Creating account…"
+                : "Signing in…"
+              : isSignup
+                ? "Create account"
+                : "Sign in"}
+          </button>
+        </form>
+
+        <p className="mt-4 text-center text-sm text-text-muted">
+          {isSignup ? "Already have an account?" : "New to ChatPulse?"}{" "}
+          <button
+            type="button"
+            onClick={() => {
+              setMode(isSignup ? "signin" : "signup");
+              setError(null);
+            }}
+            className="font-medium text-accent hover:underline focus:outline-none focus-visible:shadow-focus"
+          >
+            {isSignup ? "Sign in" : "Create an account"}
+          </button>
+        </p>
+
+        {/* Divider */}
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs text-text-muted">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
 
         <div className="flex flex-col gap-3">
           <button
