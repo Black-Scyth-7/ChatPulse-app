@@ -23,6 +23,7 @@ import {
   showNotification,
 } from "@/lib/notifications";
 import { useNotificationSettings } from "@/lib/useNotificationSettings";
+import { registerPushNotifications, updatePushMode } from "@/lib/mobilePush";
 
 /**
  * Client-side store for the unified WhatsApp-style conversation list — channels
@@ -226,6 +227,24 @@ export function ConversationsProvider({
     });
     return unsubscribe;
   }, [router]);
+
+  // On the Android app (remote webview): register for FCM push notifications
+  // after auth, and navigate to the tapped conversation. No-op on web/desktop.
+  useEffect(() => {
+    let cleanup: (() => void) | undefined;
+    void registerPushNotifications({
+      onNavigate: (path) => router.push(path),
+    }).then((fn) => {
+      cleanup = fn;
+    });
+    return () => cleanup?.();
+  }, [router]);
+
+  // Keep the server's copy of the notification mode in sync so offline pushes
+  // honour a muted / DMs-only choice made on the device.
+  useEffect(() => {
+    updatePushMode(mode);
+  }, [mode]);
 
   // A channel the user was just added to: prepend it (no refetch needed).
   useEffect(() => {
