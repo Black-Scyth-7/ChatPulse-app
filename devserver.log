@@ -1,0 +1,19 @@
+$ tsx server/index.ts
+[chatpulse] ready on http://localhost:3000 (Next + Socket.io)
+(node:34084) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 4s (545 modules)
+ POST /api/issues/CHAA-57/comments 404 in 4869ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 721ms (236 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 8.1s (570 modules)
+ ✓ Compiled in 1243ms (233 modules)
+ GET /login 200 in 9721ms
+ ○ Compiling /icon.svg ...
+ ✓ Compiled /icon.svg in 604ms (354 modules)
+ GET /icon.svg?111acb4a95454194 200 in 1012ms
+ ⚠ Cross origin request detected from 10.0.2.2 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /icon.svg?111acb4a95454194 200 in 33ms

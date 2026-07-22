@@ -7,6 +7,7 @@ import type {
 
 /**
  * Shared browser Socket.io client.
+ * 
  *
  * The realtime server (server/index.ts) runs on the same origin as Next.js, so
  * `io()` with no URL connects back to it and the browser forwards the NextAuth
@@ -17,11 +18,10 @@ import type {
  * reference count so the socket connects on the first mount and disconnects
  * once the last consumer unmounts.
  */
-
 export type ChatSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 let socket: ChatSocket | null = null;
-let refCount = 0;
+let refCount = 0
 
 /** Return the shared socket, creating it (disconnected) on first use. */
 function getSocket(): ChatSocket {
